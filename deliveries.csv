@@ -1,0 +1,12 @@
+id,medicine_name,quantity,total_weight,city,location_name,priority
+0,Paracetamol,100,20.0,Adamantina,Hospital Central,1
+1,Insulina,30,5.5,Campinas,Clinica Vida,0
+2,Amoxicilina,200,40.0,Santos,Farmacia Popular,2
+3,Vacina XYZ,50,15.0,Ribeirão Preto,Hospital São Lucas,0
+4,Morfina,10,2.0,São José do Rio Preto,Hospital Regional,0
+5,Ibuprofeno,150,18.0,Bauru,Hospital Municipal,1
+6,Heparina,20,6.0,São Paulo,Hospital das Clínicas,0
+7,Vitamina D,300,12.0,Sorocaba,Clínica Bem Estar,2
+8,Antialérgico,80,9.0,Piracicaba,UPA Central,1
+9,Antibiótico XYZ,60,14.0,Presidente Prudente,Santa Casa,2
+10,Vacina Gripe,120,25.0,Marília,Posto de Saúde Norte,1
