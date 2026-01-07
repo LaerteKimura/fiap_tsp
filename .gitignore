@@ -1,3 +1,6 @@
 .venv
 vrp_final_solution_*.json
+vrp_solution_*.json
+relatorio_vrp*.pdf
+*.png
 __pycache__/
