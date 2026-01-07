@@ -466,10 +466,10 @@ def run_tsp_mode(data, ga_config):
         
         clock.tick(30)
     
-    # Exportar automaticamente ao finalizar
-    if best_solution:
-        filename = f"tsp_final_solution_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        export_solution_to_json(data, best_solution, "TSP", export_path=filename)
+    # REMOVIDO: Exportação automática ao finalizar
+    # if best_solution:
+    #     filename = f"tsp_final_solution_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    #     export_solution_to_json(data, best_solution, "TSP", export_path=filename)
     
     pygame.quit()
 
@@ -687,13 +687,12 @@ def run_vrp_mode(data, ga_config, depot_city):
         pygame.display.flip()
         clock.tick(30)
     
-    # Exportar automaticamente ao finalizar
-    if vrp_routes:
-        filename = f"vrp_final_solution_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        export_solution_to_json(data, vrp_routes, "VRP", depot_city, export_path=filename)
+    # REMOVIDO: Exportação automática ao finalizar
+    # if vrp_routes:
+    #     filename = f"vrp_final_solution_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    #     export_solution_to_json(data, vrp_routes, "VRP", depot_city, export_path=filename)
     
     pygame.quit()
-
 
 def main():
     data = load_all_data()
