@@ -8,9 +8,9 @@ import json
 from datetime import datetime
 
 from config import *
-from data_loader import load_all_data
+from loader_resources.data_loader import load_all_data
 from route_helpers import calculate_route_weight, calculate_route_distance, select_vehicle
-from ui_renderer import (
+from ui_resources.ui_renderer import (
     render_evolution_plots,
     render_vrp_evolution_plots,
     render_route_list,
@@ -23,11 +23,11 @@ from ui_renderer import (
 )
 
 try:
-    from ui_renderer import render_vrp_initial_search
+    from ui_resources.ui_renderer import render_vrp_initial_search
 except ImportError:
     render_vrp_initial_search = None
 from vrp_menu_gui import show_mode_selection, show_vrp_depot_selection
-from ga_menu_gui import show_ga_menu
+from ui_resources.ga_menu_gui import show_ga_menu
 from genetic_algorithm import (
     generate_random_population,
     calculate_fitness,

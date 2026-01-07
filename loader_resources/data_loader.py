@@ -4,9 +4,9 @@ import pygame
 from collections import defaultdict
 from typing import Dict, List, Tuple
 
-from delivery_loader import load_deliveries
-from vehicle_loader import load_vehicles
-from city_loader import load_distances_from_tsv, load_city_coordinates_from_csv
+from loader_resources.delivery_loader import load_deliveries
+from loader_resources.vehicle_loader import load_vehicles
+from loader_resources.city_loader import load_distances_from_tsv, load_city_coordinates_from_csv
 from sp_map import (
     build_sp_map_surface, 
     project_latlng, 
