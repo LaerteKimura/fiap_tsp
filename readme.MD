@@ -54,7 +54,7 @@ Sistema completo de otimização de rotas de entrega utilizando **Algoritmos Gen
 ### 2. Clonar ou Baixar o Projeto
 
 ```bash
-git clone https://github.com/seu-usuario/otimizacao-rotas.git
+git clone https://github.com/LaerteKimura/fiap_tsp.git
 cd otimizacao-rotas
 ```
 
