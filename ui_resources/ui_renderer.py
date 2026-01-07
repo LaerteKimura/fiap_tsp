@@ -748,6 +748,7 @@ def render_footer(
             f"Rotas viáveis: {sum(1 for f in fitness_list if f < 10000)}/{population_size}",
             f"Cidades na rota: {num_cities}",
             "Controles:",
+            "E=Gerar arquivo com solução",
             "G=gráficos  L=lista  T=tentativas",
             "C=coords  P=pausa  R=reset  Q=sair"
         ]
@@ -764,6 +765,7 @@ def render_footer(
             f"Custo atual: R$ {best_fitness:.2f}{improvement}",
             f"Gráfico: {graph_mode} | Cidades: {num_cities}",
             "Controles:",
+            "E=Gerar arquivo com solução",
             "G=gráficos  L=lista  V=cidades  D=detalhes",
             "C=coords  P=pausa  R=recalcular  Q=sair"
         ]

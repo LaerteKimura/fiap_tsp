@@ -1,0 +1,21 @@
+# Dependências para Análise de Rotas com Gemini AI
+
+# API Gemini
+google-generativeai>=0.3.0
+
+# Geração de PDF
+reportlab>=4.0.0
+
+# Visualizações
+matplotlib>=3.7.0
+
+# Processamento de dados
+pandas>=2.0.0
+numpy>=1.24.0
+
+#Interface gráfica e visualização
+pygame
+
+
+# Instalação:
+# pip install -r requirements_analysis.txt

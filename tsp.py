@@ -50,7 +50,6 @@ def export_solution_to_json(data, solution, mode, depot_city=None, export_path="
     """
     
     if mode == "TSP":
-        # Para modo TSP
         best_route = solution
         coord_to_city = data['coord_to_city']
         deliveries_by_city = data['deliveries_by_city']
@@ -61,7 +60,6 @@ def export_solution_to_json(data, solution, mode, depot_city=None, export_path="
         total_distance = calculate_route_distance(best_route, coord_to_city, distance_lookup)
         vehicle = select_vehicle(total_weight, total_distance, vehicles)
         
-        # Detalhes da rota
         route_details = []
         for i, coord in enumerate(best_route):
             city = coord_to_city.get(coord)
@@ -152,12 +150,11 @@ def export_solution_to_json(data, solution, mode, depot_city=None, export_path="
             }
         }
     
-    else:  # Modo VRP
+    else:
         vrp_routes = solution
         coord_to_city = data['coord_to_city']
         deliveries_by_city = data['deliveries_by_city']
         
-        # Processar todas as rotas VRP
         routes_details = []
         for i, route in enumerate(vrp_routes):
             route_cities = []
@@ -209,7 +206,6 @@ def export_solution_to_json(data, solution, mode, depot_city=None, export_path="
             }
             routes_details.append(route_info)
         
-        # Análise agregada
         all_deliveries = []
         for route in routes_details:
             for city in route["cities"]:
@@ -291,7 +287,6 @@ def export_solution_to_json(data, solution, mode, depot_city=None, export_path="
             }
         }
     
-    # Salvar em arquivo
     try:
         with open(export_path, 'w', encoding='utf-8') as f:
             json.dump(export_data, f, ensure_ascii=False, indent=2)
@@ -416,7 +411,6 @@ def run_tsp_mode(data, ga_config):
         vehicle = select_vehicle(total_weight, total_distance_km, vehicles)
         distance_history.append(total_distance_km)
         
-        # Atualizar melhor solução
         if best_fitness < best_solution_fitness:
             best_solution = best[:]
             best_solution_fitness = best_fitness
@@ -465,11 +459,6 @@ def run_tsp_mode(data, ga_config):
             print(f"Geração {generation}: Fitness={best_fitness:.2f}, Distância={total_distance_km:.1f}km, Veículo={vehicle.name if vehicle else 'Nenhum'}")
         
         clock.tick(30)
-    
-    # REMOVIDO: Exportação automática ao finalizar
-    # if best_solution:
-    #     filename = f"tsp_final_solution_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    #     export_solution_to_json(data, best_solution, "TSP", export_path=filename)
     
     pygame.quit()
 
@@ -687,24 +676,96 @@ def run_vrp_mode(data, ga_config, depot_city):
         pygame.display.flip()
         clock.tick(30)
     
-    # REMOVIDO: Exportação automática ao finalizar
-    # if vrp_routes:
-    #     filename = f"vrp_final_solution_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    #     export_solution_to_json(data, vrp_routes, "VRP", depot_city, export_path=filename)
-    
     pygame.quit()
+
+
+def show_analyze_menu():
+    """Menu para escolher analisar soluções existentes."""
+    pygame.init()
+    
+    WIDTH = 600
+    HEIGHT = 400
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Análise de Soluções")
+    
+    font_title = pygame.font.SysFont("Arial", 24, bold=True)
+    font_normal = pygame.font.SysFont("Arial", 16)
+    font_small = pygame.font.SysFont("Arial", 14)
+    
+    clock = pygame.time.Clock()
+    running = True
+    choice = None
+    
+    while running:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                choice = "skip"
+                running = False
+            elif event.type == KEYDOWN:
+                if event.key == K_a:
+                    choice = "analyze"
+                    running = False
+                elif event.key == K_n:
+                    choice = "new"
+                    running = False
+                elif event.key == K_ESCAPE:
+                    choice = "skip"
+                    running = False
+        
+        screen.fill(WHITE)
+        
+        title = font_title.render("Bem-vindo ao Sistema de Rotas", True, BLACK)
+        screen.blit(title, (WIDTH//2 - title.get_width()//2, 80))
+        
+        option1 = font_normal.render("Pressione A - Analisar solução existente", True, BLUE)
+        screen.blit(option1, (WIDTH//2 - option1.get_width()//2, 180))
+        
+        option2 = font_normal.render("Pressione N - Criar nova solução", True, GREEN)
+        screen.blit(option2, (WIDTH//2 - option2.get_width()//2, 220))
+        
+        hint = font_small.render("(ESC para sair)", True, DARK_GRAY)
+        screen.blit(hint, (WIDTH//2 - hint.get_width()//2, 280))
+        
+        pygame.display.flip()
+        clock.tick(30)
+    
+    pygame.display.quit()
+    pygame.display.init()
+    
+    return choice
+
 
 def main():
     data = load_all_data()
     
     pygame.init()
     
+    initial_choice = show_analyze_menu()
+    
+    if initial_choice == "skip":
+        print("✅ Programa finalizado")
+        sys.exit()
+    
+    elif initial_choice == "analyze":
+        print("\n🔍 Modo Análise Selecionado")
+        pygame.quit()
+        
+        try:
+            import route_analyzer
+            route_analyzer.main()
+        except ImportError:
+            print("❌ Módulo route_analyzer.py não encontrado")
+            print("   Certifique-se de que o arquivo route_analyzer.py está no mesmo diretório")
+        except Exception as e:
+            print(f"❌ Erro ao executar análise: {e}")
+        
+        sys.exit()
+    
     mode = show_mode_selection()
     
     print(f"\n🎯 Modo selecionado: {mode.upper()}")
     print("📝 Dicas de controle:")
     print("   • Pressione E para exportar a solução atual")
-    print("   • A solução será exportada automaticamente ao sair")
     
     ga_config = show_ga_menu()
     
