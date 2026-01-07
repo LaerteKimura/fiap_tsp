@@ -1,0 +1,9 @@
+id,medicine_name,quantity,total_weight,city,location_name,priority
+0,Morfina,15,3.5,São Paulo,Hospital das Clínicas,0
+2,Insulina,40,8.0,Santos,UPA Ponta da Praia,0
+4,Adrenalina,20,4.5,Piracicaba,Hospital dos Fornecedores,0
+6,Antibiótico A,250,55.0,Agudos,Hospital Regional,2
+8,Dipirona,400,70.0,Bauru,Drogaria Central,1
+9,Amoxicilina,300,58.0,Alambari,UPA Norte,2
+11,Omeprazol,550,80.0,Marília,Hospital Beneficente,1
+12,Ibuprofeno,450,68.0,Taubaté,Farmácia São José,2

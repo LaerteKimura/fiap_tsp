@@ -16,11 +16,11 @@ from sp_map import (
 from config import MAP_WIDTH, HEIGHT, INFO_WIDTH
 
 
-def load_all_data(deliveries_path: str = "deliveries.csv",
-                  distances_path: str = "cidades_sp.tsv",
-                  vehicles_path: str = "veiculos.csv",
-                  coordinates_path: str = "worldcities.csv",
-                  geojson_path: str = "geojs-35-mun.json"):
+def load_all_data(deliveries_path: str = "data_files/deliveries.csv",
+                  distances_path: str = "data_files/cidades_sp.tsv",
+                  vehicles_path: str = "data_files/veiculos.csv",
+                  coordinates_path: str = "data_files/worldcities.csv",
+                  geojson_path: str = "data_files/geojs-35-mun.json"):
     """
     Carrega todos os dados necessários para o TSP.
     Retorna um dicionário com todos os dados carregados.

@@ -1,0 +1,14 @@
+id,medicine_name,quantity,total_weight,city,location_name,priority
+0,Morfina,15,3.5,São Paulo,Hospital das Clínicas,0
+1,Vacina COVID,25,5.0,Campinas,Hospital Municipal,0
+2,Insulina,40,8.0,Santos,UPA Ponta da Praia,0
+3,Soro Antiofídico,10,2.5,Sorocaba,Pronto Socorro Central,0
+4,Adrenalina,20,4.5,Piracicaba,Hospital dos Fornecedores,0
+5,Plasma,30,6.5,Jundiaí,Hospital São Vicente,0
+6,Antibiótico A,250,55.0,Agudos,Hospital Regional,2
+7,Paracetamol,500,85.0,Alto Alegre,Farmácia Popular,1
+8,Dipirona,400,70.0,Bauru,Drogaria Central,1
+9,Amoxicilina,300,58.0,Alambari,UPA Norte,2
+10,Vitamina C,600,92.0,Araraquara,Posto de Saúde,1
+11,Omeprazol,550,80.0,Marília,Hospital Beneficente,1
+12,Ibuprofeno,450,68.0,Taubaté,Farmácia São José,2
