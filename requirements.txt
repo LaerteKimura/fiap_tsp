@@ -18,4 +18,4 @@ pygame
 
 
 # Instalação:
-# pip install -r requirements_analysis.txt
+# pip install -r requirements.txt

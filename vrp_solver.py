@@ -458,7 +458,7 @@ def optimize_route_order(route_coords, coord_to_city, deliveries_by_city):
 
 def force_feasibility(solution, vehicles, depot_coord, coord_to_city, deliveries_by_city, distance_lookup):
     """Força viabilidade redistribuindo cidades."""
-    print("  Aplicando correções de viabilidade...")
+    # print("  Aplicando correções de viabilidade...")
     
     # Coletar todas as cidades
     all_cities = []
@@ -530,10 +530,6 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
              distance_lookup, vehicles, ga_config,
              depot_city=None, generations_per_route=150):
     
-    print("\n🚀 VRP COM FORÇAÇÃO DE VIABILIDADE")
-    print(f"📍 Cidades: {len(cities_coords)}")
-    print(f"🚛 Veículos: {len(vehicles)}")
-    
     # Configurações
     options = VRPOptions()
     
@@ -544,7 +540,7 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
             if city == depot_city:
                 depot_coord = coord
                 break
-        print(f"🏭 Depósito: {depot_city}")
+        # print(f"🏭 Depósito: {depot_city}")
     
     all_cities_set = set(cities_coords)
     
@@ -621,13 +617,11 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
             is_best_feasible = all(route.is_feasible for route in best_solution)
             if is_best_feasible and not feasible_found:
                 feasible_found = True
-                print(f"🌟 Solução viável encontrada na geração {gen}")
             
             if gen % 10 == 0 or gen < 20:
                 active = sum(1 for r in best_solution if r.route)
                 total_cities = sum(len(r.route) for r in best_solution)
                 feasible_status = "✅" if is_best_feasible else "❌"
-                print(f"Gen {gen:3d} | Fit: {best_fitness:8.0f} | V: {active} | C: {total_cities} | {feasible_status}")
         else:
             stagnation_counter += 1
         
@@ -639,12 +633,11 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
             distance_history.append(total_distance)
         
         # 3. Relatório periódico
-        if gen % 20 == 0:
-            print(f"   Viáveis: {feasible_count}/{POPULATION_SIZE} | Estagnação: {stagnation_counter}")
+        # if gen % 20 == 0:
+        #     print(f"   Viáveis: {feasible_count}/{POPULATION_SIZE} | Estagnação: {stagnation_counter}")
         
         # 4. Estratégia de escape se estagnado em inviáveis
-        if stagnation_counter > 30 and not feasible_found:
-            print(f"🔁 Reiniciando população (gen {gen})")
+        if stagnation_counter > 30 and not feasible_found:            
             
             # Nova população mais conservadora
             new_population = []
@@ -667,7 +660,7 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
         
         # 5. Parada se viável e estagnado
         if feasible_found and stagnation_counter > 40:
-            print(f"🏁 Parando na geração {gen} (solução viável encontrada)")
+            # print(f"🏁 Parando na geração {gen} (solução viável encontrada)")
             break
         
         # 6. Seleção
@@ -700,14 +693,14 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
         population = new_population
     
     # OTIMIZAÇÃO FINAL
-    print("\n🔧 Fase final de otimização...")
+    # print("\n🔧 Fase final de otimização...")
     
     if best_solution:
         # Verificar viabilidade
         is_feasible = all(route.is_feasible for route in best_solution)
         
         if not is_feasible:
-            print("⚠️  Aplicando correções de viabilidade...")
+            # print("⚠️  Aplicando correções de viabilidade...")
             best_solution = force_feasibility(best_solution, vehicles_sorted, depot_coord,
                                             coord_to_city, deliveries_by_city, distance_lookup)
         
@@ -720,7 +713,7 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
     final_solution = [r for r in best_solution if r.route] if best_solution else []
     
     # RELATÓRIO FINAL
-    print_final_report(final_solution, cities_coords, coord_to_city, deliveries_by_city)
+    # print_final_report(final_solution, cities_coords, coord_to_city, deliveries_by_city)
     
     return final_solution, {
         "cost_history": cost_history,

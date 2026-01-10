@@ -25,17 +25,13 @@ def load_all_data(deliveries_path: str = "data_files/deliveries.csv",
     Carrega todos os dados necessários para o TSP.
     Retorna um dicionário com todos os dados carregados.
     """
-    
-    print("\n🔄 Carregando dados...")
-    
+
     deliveries = load_deliveries(deliveries_path)
     deliveries_by_city = defaultdict(list)
     for d in deliveries:
         deliveries_by_city[d.city].append(d)
 
     cities = sorted(deliveries_by_city.keys())
-    print(f"✅ {len(cities)} cidades para entregas: {cities}")
-
     try:
         _, distance_lookup = load_distances_from_tsv(distances_path)
         
@@ -58,8 +54,6 @@ def load_all_data(deliveries_path: str = "data_files/deliveries.csv",
             except Exception as e:
                 print(f"⚠️  Não foi possível usar GeoJSON: {e}")
         
-        print(f"✅ {len(distance_lookup)//2} distâncias carregadas")
-        
     except Exception as e:
         print(f"✗ Erro ao carregar distâncias: {e}")
         distance_lookup = {}
@@ -71,13 +65,11 @@ def load_all_data(deliveries_path: str = "data_files/deliveries.csv",
                     distance_lookup[(city1, city2)] = abs(i - j) * 50 + 30
 
     vehicles = load_vehicles(vehicles_path)
-    print(f"✅ {len(vehicles)} veículos carregados")
-
     city_latlng = load_city_coordinates_from_csv(coordinates_path, cities)
 
     missing = set(cities) - set(city_latlng.keys())
     if missing:
-        print(f"⚠️  {len(missing)} CIDADES SEM COORDENADAS: {missing}")
+        # print(f"⚠️  {len(missing)} CIDADES SEM COORDENADAS: {missing}")
         sp_cities_approx = {
             'São Paulo': (-23.55, -46.63),
             'Campinas': (-22.90, -47.06),
@@ -97,31 +89,23 @@ def load_all_data(deliveries_path: str = "data_files/deliveries.csv",
         for city in list(missing):
             if city in sp_cities_approx:
                 city_latlng[city] = sp_cities_approx[city]
-                missing.remove(city)
-                print(f"  ✓ Coordenada padrão para {city}")
+                missing.remove(city)                
         
         for i, city in enumerate(missing):
             lat = -22.5 + (i % 5) * 0.5
             lng = -48.0 + (i // 5) * 0.5
-            city_latlng[city] = (lat, lng)
-            print(f"  ⚠️  {city}: coordenada estimada ({lat:.2f}, {lng:.2f})")
-
-    print("\n🗺️ Posicionando cidades no mapa...")
+            city_latlng[city] = (lat, lng)            
 
     map_rect = pygame.Rect(INFO_WIDTH, 0, MAP_WIDTH, HEIGHT)
 
     city_to_coord = {}
     for city, (lat, lng) in city_latlng.items():
         x, y = project_latlng(lat, lng, map_rect, SP_BOUNDS)
-        city_to_coord[city] = (x, y)
-        print(f"  ✓ {city}: ({lat:.2f}, {lng:.2f}) → ({x}, {y})")
+        city_to_coord[city] = (x, y)        
 
     coords = [city_to_coord[c] for c in cities]
     coord_to_city = {coord: city for city, coord in city_to_coord.items()}
 
-    print(f"\n✅ {len(coords)} coordenadas mapeadas usando project_latlng()")
-
-    print("\n🗺️ Gerando mapa de São Paulo...")
     map_surface = build_sp_map_surface(
         size=(MAP_WIDTH, HEIGHT),
         geojson_path=geojson_path
