@@ -1,4 +1,3 @@
-# vehicle_loader.py
 import csv
 from dataclasses import dataclass
 from typing import List

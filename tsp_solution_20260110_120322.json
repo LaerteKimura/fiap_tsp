@@ -1,0 +1,260 @@
+{
+  "metadata": {
+    "export_timestamp": "2026-01-10T12:03:22.370256",
+    "mode": "TSP",
+    "algorithm": "Genetic Algorithm",
+    "total_cities": 8
+  },
+  "constraints": {
+    "vehicles_available": [
+      {
+        "id": "1",
+        "name": "Moto 1",
+        "max_weight": 80.0,
+        "cost_per_km": 0.8,
+        "max_distance": 150.0
+      },
+      {
+        "id": "2",
+        "name": "Moto 2",
+        "max_weight": 80.0,
+        "cost_per_km": 0.8,
+        "max_distance": 150.0
+      },
+      {
+        "id": "3",
+        "name": "Van 1",
+        "max_weight": 600.0,
+        "cost_per_km": 1.2,
+        "max_distance": 600.0
+      },
+      {
+        "id": "4",
+        "name": "Caminhao Pequeno 1",
+        "max_weight": 1200.0,
+        "cost_per_km": 1.8,
+        "max_distance": 800.0
+      },
+      {
+        "id": "5",
+        "name": "Caminhao Grande 1",
+        "max_weight": 3500.0,
+        "cost_per_km": 4.5,
+        "max_distance": 4000.0
+      },
+      {
+        "id": "6",
+        "name": "Caminhao Agregado",
+        "max_weight": 3500.0,
+        "cost_per_km": 1.5,
+        "max_distance": 4000.0
+      }
+    ],
+    "selected_vehicle": {
+      "id": "6",
+      "name": "Caminhao Agregado",
+      "max_weight": 3500.0,
+      "cost_per_km": 1.5,
+      "max_distance": 4000.0,
+      "is_sufficient": true
+    }
+  },
+  "solution": {
+    "route_coordinates": [
+      [
+        1171,
+        649
+      ],
+      [
+        1140,
+        591
+      ],
+      [
+        1034,
+        474
+      ],
+      [
+        886,
+        416
+      ],
+      [
+        794,
+        402
+      ],
+      [
+        894,
+        439
+      ],
+      [
+        997,
+        442
+      ],
+      [
+        1253,
+        518
+      ]
+    ],
+    "route_cities": [
+      "Santos",
+      "São Paulo",
+      "Piracicaba",
+      "Bauru",
+      "Marília",
+      "Agudos",
+      "Alambari",
+      "Taubaté"
+    ],
+    "route_details": [
+      {
+        "sequence": 1,
+        "city": "Santos",
+        "delivery_count": 1,
+        "total_weight": 8.0,
+        "deliveries": [
+          {
+            "id": 2,
+            "medicine_name": "Insulina",
+            "quantity": 40,
+            "total_weight": 8.0,
+            "city": "Santos",
+            "location_name": "UPA Ponta da Praia",
+            "priority": 0
+          }
+        ]
+      },
+      {
+        "sequence": 2,
+        "city": "São Paulo",
+        "delivery_count": 1,
+        "total_weight": 3.5,
+        "deliveries": [
+          {
+            "id": 1,
+            "medicine_name": "Morfina",
+            "quantity": 15,
+            "total_weight": 3.5,
+            "city": "São Paulo",
+            "location_name": "Hospital das Clínicas",
+            "priority": 0
+          }
+        ]
+      },
+      {
+        "sequence": 3,
+        "city": "Piracicaba",
+        "delivery_count": 1,
+        "total_weight": 4.5,
+        "deliveries": [
+          {
+            "id": 4,
+            "medicine_name": "Adrenalina",
+            "quantity": 20,
+            "total_weight": 4.5,
+            "city": "Piracicaba",
+            "location_name": "Hospital dos Fornecedores",
+            "priority": 0
+          }
+        ]
+      },
+      {
+        "sequence": 4,
+        "city": "Bauru",
+        "delivery_count": 1,
+        "total_weight": 70.0,
+        "deliveries": [
+          {
+            "id": 8,
+            "medicine_name": "Dipirona",
+            "quantity": 400,
+            "total_weight": 70.0,
+            "city": "Bauru",
+            "location_name": "Drogaria Central",
+            "priority": 1
+          }
+        ]
+      },
+      {
+        "sequence": 5,
+        "city": "Marília",
+        "delivery_count": 1,
+        "total_weight": 80.0,
+        "deliveries": [
+          {
+            "id": 11,
+            "medicine_name": "Omeprazol",
+            "quantity": 550,
+            "total_weight": 80.0,
+            "city": "Marília",
+            "location_name": "Hospital Beneficente",
+            "priority": 1
+          }
+        ]
+      },
+      {
+        "sequence": 6,
+        "city": "Agudos",
+        "delivery_count": 1,
+        "total_weight": 55.0,
+        "deliveries": [
+          {
+            "id": 6,
+            "medicine_name": "Antibiótico A",
+            "quantity": 250,
+            "total_weight": 55.0,
+            "city": "Agudos",
+            "location_name": "Hospital Regional",
+            "priority": 2
+          }
+        ]
+      },
+      {
+        "sequence": 7,
+        "city": "Alambari",
+        "delivery_count": 1,
+        "total_weight": 58.0,
+        "deliveries": [
+          {
+            "id": 9,
+            "medicine_name": "Amoxicilina",
+            "quantity": 300,
+            "total_weight": 58.0,
+            "city": "Alambari",
+            "location_name": "UPA Norte",
+            "priority": 2
+          }
+        ]
+      },
+      {
+        "sequence": 8,
+        "city": "Taubaté",
+        "delivery_count": 1,
+        "total_weight": 68.0,
+        "deliveries": [
+          {
+            "id": 12,
+            "medicine_name": "Ibuprofeno",
+            "quantity": 450,
+            "total_weight": 68.0,
+            "city": "Taubaté",
+            "location_name": "Farmácia São José",
+            "priority": 2
+          }
+        ]
+      }
+    ],
+    "total_weight": 347.0,
+    "total_distance_km": 1067.5643268182182,
+    "estimated_cost": 1601.3464902273272
+  },
+  "analysis": {
+    "delivery_statistics": {
+      "total_deliveries": 8,
+      "priority_distribution": {
+        "0": 3,
+        "1": 2,
+        "2": 3
+      },
+      "avg_weight_per_delivery": 43.375
+    }
+  }
+}
