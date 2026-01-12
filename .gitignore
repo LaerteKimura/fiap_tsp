@@ -1,6 +1,16 @@
-.venv
-/venv
+# ===== Python cache =====
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ===== Virtual environments =====
+venv/
+.venv/
+ENV/
+env/
+
 vrp_final_solution_*.json
 vrp_solution_*.json
 relatorio_vrp*.pdf
-__pycache__/
