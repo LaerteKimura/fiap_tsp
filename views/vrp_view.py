@@ -179,7 +179,9 @@ def run_vrp_mode(data, ga_config, depot_city, export_fn=None):
         # -------------------------
         iteration += 1
 
-        if iteration % 30 == 0:
+        # [MELHORIA] Otimizar re-otimização periódica - reduzir frequência e usar menos gerações para reduzir custo computacional
+        # Re-otimiza apenas a cada 60 iterações (antes era 30) e com menos gerações para não travar a interface
+        if iteration % 60 == 0:  # Reduzido de 30 para 60 iterações
             new_routes, _new_history = solve_vrp(
                 coords,
                 coord_to_city,
@@ -188,7 +190,7 @@ def run_vrp_mode(data, ga_config, depot_city, export_fn=None):
                 vehicles,
                 ga_config,
                 depot_city,
-                VRP_GENERATIONS_PER_ROUTE // 3,
+                VRP_GENERATIONS_PER_ROUTE // 5,  # Reduzido de //3 para //5 (menos gerações = mais rápido)
             )
 
             new_cost = sum(r.total_cost for r in new_routes)

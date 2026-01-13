@@ -11,7 +11,11 @@ from genetic_algorithm import (
     calculate_priority_penalty
 )
 
-from config import POPULATION_SIZE, MUTATION_RATE
+from config import (
+    POPULATION_SIZE, MUTATION_RATE, ELITE_PERCENTAGE,
+    VRP_FIXED_COST_PER_ROUTE, VRP_MAX_GENERATIONS,
+    VRP_CONVERGENCE_GENERATIONS, VRP_CONVERGENCE_THRESHOLD
+)
 
 
 # =========================
@@ -90,8 +94,9 @@ class VRPRoute:
             self.route, coord_to_city, deliveries_by_city
         )
         
-        # Custo
-        self.total_cost = (self.total_distance * self.vehicle.cost_per_km) + 800
+        # Custo (usando custo fixo configurável do config)
+        # [MELHORIA] Tornar custo fixo configurável - permite ajustar custo fixo por rota via config
+        self.total_cost = (self.total_distance * self.vehicle.cost_per_km) + VRP_FIXED_COST_PER_ROUTE
         
         # Calcular violações
         self.weight_violation = max(0, self.total_weight - self.vehicle.max_weight)
@@ -526,6 +531,25 @@ def force_feasibility(solution, vehicles, depot_coord, coord_to_city, deliveries
 # =========================
 # ALGORITMO PRINCIPAL
 # =========================
+# [MELHORIA] Adicionar validação de integridade - garante que todas as cidades estão presentes e sem duplicatas
+def validate_vrp_solution(solution, all_cities_coords):
+    """
+    Valida se todas as cidades estão presentes exatamente uma vez na solução.
+    Retorna (é_válida, cidades_faltando, tem_duplicatas)
+    """
+    cities_in_solution = []
+    for route in solution:
+        cities_in_solution.extend(route.route)
+    
+    expected_cities = set(all_cities_coords)
+    cities_in_solution_set = set(cities_in_solution)
+    
+    missing_cities = expected_cities - cities_in_solution_set
+    has_duplicates = len(cities_in_solution) != len(cities_in_solution_set)
+    
+    return len(missing_cities) == 0 and not has_duplicates, missing_cities, has_duplicates
+
+
 def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
              distance_lookup, vehicles, ga_config,
              depot_city=None, generations_per_route=150):
@@ -580,8 +604,12 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
     best_fitness = float('inf')
     stagnation_counter = 0
     feasible_found = False
+    last_best_fitness = float('inf')
     
-    for gen in range(generations_per_route):
+    # [MELHORIA] Melhorar critérios de parada - usar limite máximo configurável e detectar convergência
+    max_generations = min(generations_per_route, VRP_MAX_GENERATIONS)
+    
+    for gen in range(max_generations):
         # 1. Avaliar população
         fitness_scores = []
         feasible_count = 0
@@ -608,10 +636,20 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
         
         # 2. Verificar melhoria
         current_best = fitness_scores[0][0]
+        improvement = last_best_fitness - current_best
+        
         if current_best < best_fitness:
             best_fitness = current_best
             best_solution = deepcopy(fitness_scores[0][1])
             stagnation_counter = 0
+            
+            # [MELHORIA] Adicionar validação de integridade - verifica se todas as cidades estão presentes
+            is_valid, missing, has_dup = validate_vrp_solution(best_solution, all_cities_set)
+            if not is_valid:
+                # Corrigir se necessário
+                if missing or has_dup:
+                    best_solution = force_feasibility(best_solution, vehicles_sorted, depot_coord,
+                                                    coord_to_city, deliveries_by_city, distance_lookup)
             
             # Verificar viabilidade
             is_best_feasible = all(route.is_feasible for route in best_solution)
@@ -624,6 +662,14 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
                 feasible_status = "✅" if is_best_feasible else "❌"
         else:
             stagnation_counter += 1
+        
+        # [MELHORIA] Melhorar critérios de parada - detectar convergência baseado em threshold configurável
+        if improvement < VRP_CONVERGENCE_THRESHOLD:
+            if stagnation_counter >= VRP_CONVERGENCE_GENERATIONS:
+                # Convergência detectada - parar evolução
+                break
+        
+        last_best_fitness = current_best
         
         # Registrar histórico
         if best_solution:
@@ -664,22 +710,42 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
             break
         
         # 6. Seleção
-        elite_size = max(2, POPULATION_SIZE // 5)
+        # [MELHORIA] Tornar elitismo configurável - usar ELITE_PERCENTAGE do config em vez de valor fixo
+        elite_size = max(2, int(POPULATION_SIZE * ELITE_PERCENTAGE))
         new_population = [s[1] for s in fitness_scores[:elite_size]]
         
         # 7. Cruzamento e mutação
         while len(new_population) < POPULATION_SIZE:
-            # Torneio com preferência para viáveis
-            tournament = []
-            for _ in range(5):
-                candidate = random.choice(fitness_scores[:50])
-                is_feasible = all(route.is_feasible for route in candidate[1])
-                score = candidate[0] * (0.3 if is_feasible else 1.0)  # Bônus para viáveis
-                tournament.append((score, candidate[1]))
-            
-            tournament.sort(key=lambda x: x[0])
-            parent1 = tournament[0][1]
-            parent2 = tournament[1][1]
+            # [MELHORIA] Integrar ga_config - usar operador de seleção configurado pelo usuário quando disponível
+            if ga_config and "selection_fn" in ga_config:
+                try:
+                    # Converter para formato esperado pela seleção do ga_config
+                    population_list = [s[1] for s in fitness_scores]
+                    fitness_list = [s[0] for s in fitness_scores]
+                    parent1, parent2 = ga_config["selection_fn"](population_list, fitness_list)
+                except Exception:
+                    # Fallback para torneio se houver erro na seleção configurada
+                    tournament = []
+                    for _ in range(5):
+                        candidate = random.choice(fitness_scores[:50])
+                        is_feasible = all(route.is_feasible for route in candidate[1])
+                        score = candidate[0] * (0.3 if is_feasible else 1.0)
+                        tournament.append((score, candidate[1]))
+                    tournament.sort(key=lambda x: x[0])
+                    parent1 = tournament[0][1]
+                    parent2 = tournament[1][1]
+            else:
+                # Torneio com preferência para viáveis (fallback quando ga_config não disponível)
+                tournament = []
+                for _ in range(5):
+                    candidate = random.choice(fitness_scores[:50])
+                    is_feasible = all(route.is_feasible for route in candidate[1])
+                    score = candidate[0] * (0.3 if is_feasible else 1.0)  # Bônus para viáveis
+                    tournament.append((score, candidate[1]))
+                
+                tournament.sort(key=lambda x: x[0])
+                parent1 = tournament[0][1]
+                parent2 = tournament[1][1]
             
             # Cruzamento
             child = adaptive_crossover(parent1, parent2, depot_coord, options, gen, generations_per_route)
@@ -711,6 +777,14 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
                 route.calculate_stats(coord_to_city, deliveries_by_city, distance_lookup)
     
     final_solution = [r for r in best_solution if r.route] if best_solution else []
+    
+    # [MELHORIA] Adicionar validação de cobertura - verificar antes de retornar se todas as cidades estão presentes
+    if final_solution:
+        is_valid, missing, has_dup = validate_vrp_solution(final_solution, all_cities_set)
+        if not is_valid:
+            # Corrigir se necessário antes de retornar
+            final_solution = force_feasibility(final_solution, vehicles_sorted, depot_coord,
+                                             coord_to_city, deliveries_by_city, distance_lookup)
     
     # RELATÓRIO FINAL
     # print_final_report(final_solution, cities_coords, coord_to_city, deliveries_by_city)
