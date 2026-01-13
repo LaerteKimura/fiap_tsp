@@ -186,6 +186,19 @@ def export_solution_to_json(data, solution, mode, depot_city=None, export_path="
                     "deliveries": [_delivery_to_dict(d) for d in deliveries],
                 })
 
+            # [CORREÇÃO] Sem depósito: adicionar primeira cidade no final para mostrar retorno
+            if not depot_city and route_coords and len(route_coords) > 1:
+                first_coord = route_coords[0]
+                first_city = coord_to_city.get(first_coord)
+                if first_city:
+                    # Adicionar entrada de retorno (sem entregas, apenas para mostrar o retorno)
+                    city_details.append({
+                        "city": first_city,
+                        "delivery_count": 0,
+                        "total_weight": 0.0,
+                        "deliveries": [],
+                    })
+
             all_deliveries.extend(route_deliveries)
 
             is_weight_valid = route_weight <= vehicle.max_weight

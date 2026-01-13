@@ -63,19 +63,29 @@ class RouteAnalyzer:
         self.progress_callback("Criando chunks de texto...")
         print("\n📝 Criando chunks de texto...")
         
+        def clean_text(text):
+            """Remove caracteres nulos e outros caracteres problemáticos."""
+            if not text:
+                return ""
+            # Remover caracteres nulos (\x00)
+            text = str(text).replace('\x00', '')
+            # Remover outros caracteres de controle problemáticos (exceto \n e \t)
+            text = ''.join(char for char in text if ord(char) >= 32 or char in '\n\t')
+            return text
+        
         chunks = []
         metadata = self.solution_data.get('metadata', {})
-        mode = metadata.get('mode', 'N/A')
-        export_timestamp = metadata.get('export_timestamp', 'N/A')
-        description = metadata.get('description', 'N/A')
+        mode = clean_text(metadata.get('mode', 'N/A'))
+        export_timestamp = clean_text(metadata.get('export_timestamp', 'N/A'))
+        description = clean_text(metadata.get('description', 'N/A'))
         
         chunks.append({
             'title': 'Resumo Geral',
-            'text': f"""
+            'text': clean_text(f"""
 Modo: {mode}
 Data: {export_timestamp}
 Descrição: {description}
-            """.strip()
+            """.strip())
         })
         
         if mode == 'TSP':
@@ -89,13 +99,13 @@ Descrição: {description}
             
             chunks.append({
                 'title': 'Métricas Principais',
-                'text': f"""
+                'text': clean_text(f"""
 Veículo: {vehicle_name}
 Distância Total: {total_distance} km
 Peso Total: {total_weight} kg
 Custo Total: R$ {total_cost}
 Número de Cidades: {len(route)}
-                """.strip()
+                """.strip())
             })
             
             for i, city_info in enumerate(route[:10]):
@@ -105,29 +115,33 @@ Número de Cidades: {len(route)}
                     for d in deliveries
                 ])
                 chunks.append({
-                    'title': f"Cidade {i+1}: {city_info.get('city', 'N/A')}",
-                    'text': f"""
+                    'title': clean_text(f"Cidade {i+1}: {city_info.get('city', 'N/A')}"),
+                    'text': clean_text(f"""
 Sequência: {city_info.get('sequence', 'N/A')}
 Entregas:
 {deliveries_text if deliveries_text else 'Nenhuma entrega'}
-                    """.strip()
+                    """.strip())
                 })
         
         else:
             solution = self.solution_data.get('solution', {})
             aggregate = solution.get('aggregate_stats', {})
+            routes = solution.get('routes', [])
+            
+            # [CORREÇÃO] Usar número real de rotas ao invés de average_vehicles_used
+            num_routes = len(routes) if routes else aggregate.get('average_vehicles_used', 0)
+            
             chunks.append({
                 'title': 'Estatísticas Agregadas',
-                'text': f"""
-Número de Rotas: {aggregate.get('average_vehicles_used', 'N/A')}
+                'text': clean_text(f"""
+Número de Rotas: {num_routes}
 Custo Total: R$ {aggregate.get('total_cost', 0)}
 Distância Total: {aggregate.get('total_distance_km', 0)} km
 Peso Total: {aggregate.get('total_weight_kg', 0)} kg
 Custo Médio por Veículo: R$ {aggregate.get('cost_per_vehicle', 0)}
-                """.strip()
+Total de Cidades Visitadas: {sum(len(r.get('cities', [])) for r in routes)}
+                """.strip())
             })
-            
-            routes = solution.get('routes', [])
             for route_data in routes:
                 vehicle = route_data.get('vehicle', {})
                 stats = route_data.get('stats', {})
@@ -145,8 +159,8 @@ Cidades: {len(cities)}
 Viável: {'Sim' if feasibility.get('is_feasible', False) else 'Não'}
                 """.strip()
                 chunks.append({
-                    'title': f"Rota {route_data.get('route_id', 'N/A')}",
-                    'text': route_text
+                    'title': clean_text(f"Rota {route_data.get('route_id', 'N/A')}"),
+                    'text': clean_text(route_text)
                 })
         
         print(f"✅ {len(chunks)} chunks criados")
@@ -199,7 +213,10 @@ Viável: {'Sim' if feasibility.get('is_feasible', False) else 'Não'}
         
         context_parts = []
         for idx in top_indices:
-            context_parts.append(f"### {df.iloc[idx]['title']}\n{df.iloc[idx]['text']}")
+            # Limpar caracteres nulos do texto
+            title = str(df.iloc[idx]['title']).replace('\x00', '')
+            text = str(df.iloc[idx]['text']).replace('\x00', '')
+            context_parts.append(f"### {title}\n{text}")
         
         return "\n\n".join(context_parts)
     
@@ -309,7 +326,11 @@ Viável: {'Sim' if feasibility.get('is_feasible', False) else 'Não'}
             axes[1, 1].set_ylabel('Valores')
             
             plt.tight_layout()
-            viz_path = 'tsp_analysis.png'
+            # Salvar na pasta reports
+            reports_dir = "reports"
+            if not os.path.exists(reports_dir):
+                os.makedirs(reports_dir)
+            viz_path = os.path.join(reports_dir, 'tsp_analysis.png')
             plt.savefig(viz_path, dpi=300, bbox_inches='tight')
             plt.close()
             viz_files['main'] = viz_path
@@ -318,37 +339,73 @@ Viável: {'Sim' if feasibility.get('is_feasible', False) else 'Não'}
             solution = self.solution_data.get('solution', {})
             routes = solution.get('routes', [])
             
+            if not routes:
+                print("⚠️  Nenhuma rota encontrada para visualização")
+                return viz_files
+            
             fig, axes = plt.subplots(2, 3, figsize=(15, 10))
             fig.suptitle('Análise VRP - Múltiplas Rotas', fontsize=16, fontweight='bold')
             
-            route_costs = [r.get('stats', {}).get('total_cost', 0) for r in routes]
-            if route_costs:
+            # Custo por rota - usar 'metrics.cost' ao invés de 'stats.total_cost'
+            route_costs = [r.get('metrics', {}).get('cost', 0) for r in routes]
+            if route_costs and any(c > 0 for c in route_costs):
                 axes[0, 0].bar(range(1, len(route_costs)+1), route_costs, color='steelblue')
                 axes[0, 0].set_title('Custo por Rota')
                 axes[0, 0].set_xlabel('Rota')
                 axes[0, 0].set_ylabel('Custo (R$)')
+                axes[0, 0].grid(True, alpha=0.3, axis='y')
+            else:
+                axes[0, 0].text(0.5, 0.5, 'Sem dados', ha='center', va='center', transform=axes[0, 0].transAxes)
+                axes[0, 0].set_title('Custo por Rota (sem dados)')
             
-            route_distances = [r.get('stats', {}).get('total_distance_km', 0) for r in routes]
-            if route_distances:
+            # Distância por rota - usar 'metrics.distance_km' ao invés de 'stats.total_distance_km'
+            route_distances = [r.get('metrics', {}).get('distance_km', 0) for r in routes]
+            if route_distances and any(d > 0 for d in route_distances):
                 axes[0, 1].bar(range(1, len(route_distances)+1), route_distances, color='green')
                 axes[0, 1].set_title('Distância por Rota')
                 axes[0, 1].set_xlabel('Rota')
                 axes[0, 1].set_ylabel('Distância (km)')
+                axes[0, 1].grid(True, alpha=0.3, axis='y')
+            else:
+                axes[0, 1].text(0.5, 0.5, 'Sem dados', ha='center', va='center', transform=axes[0, 1].transAxes)
+                axes[0, 1].set_title('Distância por Rota (sem dados)')
             
-            route_weights = [r.get('stats', {}).get('total_weight_kg', 0) for r in routes]
-            if route_weights:
+            # Peso por rota - usar 'metrics.total_weight' ao invés de 'stats.total_weight_kg'
+            route_weights = [r.get('metrics', {}).get('total_weight', 0) for r in routes]
+            if route_weights and any(w > 0 for w in route_weights):
                 axes[0, 2].bar(range(1, len(route_weights)+1), route_weights, color='orange')
                 axes[0, 2].set_title('Peso por Rota')
                 axes[0, 2].set_xlabel('Rota')
                 axes[0, 2].set_ylabel('Peso (kg)')
+                axes[0, 2].grid(True, alpha=0.3, axis='y')
+            else:
+                axes[0, 2].text(0.5, 0.5, 'Sem dados', ha='center', va='center', transform=axes[0, 2].transAxes)
+                axes[0, 2].set_title('Peso por Rota (sem dados)')
             
-            analysis = self.solution_data.get('analysis', {})
-            vehicle_util = analysis.get('vehicle_utilization', [])
-            if vehicle_util:
-                weight_utils = [v.get('weight_utilization_percent', 0) for v in vehicle_util]
-                distance_utils = [v.get('distance_utilization_percent', 0) for v in vehicle_util]
+            # Utilização de veículos - calcular a partir de metrics.vehicle_utilization e vehicle
+            vehicle_utils = []
+            for r in routes:
+                metrics = r.get('metrics', {})
+                vehicle = r.get('vehicle', {})
+                vehicle_util = metrics.get('vehicle_utilization', 0)
+                max_weight = vehicle.get('max_weight', 1)
+                max_distance = vehicle.get('max_distance', 1)
+                total_weight = metrics.get('total_weight', 0)
+                distance_km = metrics.get('distance_km', 0)
                 
-                x = np.arange(len(vehicle_util))
+                weight_util_pct = (total_weight / max_weight * 100) if max_weight > 0 else 0
+                distance_util_pct = (distance_km / max_distance * 100) if max_distance > 0 else 0
+                
+                vehicle_utils.append({
+                    'weight': weight_util_pct,
+                    'distance': distance_util_pct
+                })
+            
+            if vehicle_utils:
+                weight_utils = [v['weight'] for v in vehicle_utils]
+                distance_utils = [v['distance'] for v in vehicle_utils]
+                
+                x = np.arange(len(vehicle_utils))
                 width = 0.35
                 axes[1, 0].bar(x - width/2, weight_utils, width, label='Peso', color='orange')
                 axes[1, 0].bar(x + width/2, distance_utils, width, label='Distância', color='blue')
@@ -357,31 +414,49 @@ Viável: {'Sim' if feasibility.get('is_feasible', False) else 'Não'}
                 axes[1, 0].set_ylabel('Utilização (%)')
                 axes[1, 0].legend()
                 axes[1, 0].set_xticks(x)
-                axes[1, 0].set_xticklabels([f"R{i+1}" for i in range(len(vehicle_util))])
+                axes[1, 0].set_xticklabels([f"R{i+1}" for i in range(len(vehicle_utils))])
+                axes[1, 0].grid(True, alpha=0.3, axis='y')
+            else:
+                axes[1, 0].text(0.5, 0.5, 'Sem dados', ha='center', va='center', transform=axes[1, 0].transAxes)
+                axes[1, 0].set_title('Utilização de Veículos (sem dados)')
             
-            feasible = sum(1 for r in routes if r.get('feasibility', {}).get('is_feasible', False))
+            # Viabilidade das rotas - usar 'metrics.is_valid' ao invés de 'feasibility.is_feasible'
+            feasible = sum(1 for r in routes if r.get('metrics', {}).get('is_valid', False))
             infeasible = len(routes) - feasible
             if feasible + infeasible > 0:
                 axes[1, 1].pie([feasible, infeasible], labels=['Viável', 'Inviável'],
-                              colors=['green', 'red'], autopct='%1.1f%%')
+                              colors=['green', 'red'], autopct='%1.1f%%', startangle=90)
                 axes[1, 1].set_title('Viabilidade das Rotas')
+            else:
+                axes[1, 1].text(0.5, 0.5, 'Sem dados', ha='center', va='center', transform=axes[1, 1].transAxes)
+                axes[1, 1].set_title('Viabilidade das Rotas (sem dados)')
             
+            # Distribuição de prioridades - usar 'route_details' ao invés de 'cities'
             all_priorities = []
             for route in routes:
-                cities = route.get('cities', [])
-                for city in cities:
-                    deliveries = city.get('deliveries', [])
+                route_details = route.get('route_details', [])
+                for city_detail in route_details:
+                    deliveries = city_detail.get('deliveries', [])
                     all_priorities.extend([d.get('priority', 2) for d in deliveries])
             
-            priority_counts = pd.Series(all_priorities).value_counts().sort_index()
-            axes[1, 2].bar(['Alta (P0)', 'Média (P1)', 'Baixa (P2)'],
-                          [priority_counts.get(i, 0) for i in range(3)],
-                          color=['red', 'orange', 'green'])
-            axes[1, 2].set_title('Distribuição de Prioridades')
-            axes[1, 2].set_ylabel('Quantidade')
+            if all_priorities:
+                priority_counts = pd.Series(all_priorities).value_counts().sort_index()
+                axes[1, 2].bar(['Alta (P0)', 'Média (P1)', 'Baixa (P2)'],
+                              [priority_counts.get(i, 0) for i in range(3)],
+                              color=['red', 'orange', 'green'])
+                axes[1, 2].set_title('Distribuição de Prioridades')
+                axes[1, 2].set_ylabel('Quantidade')
+                axes[1, 2].grid(True, alpha=0.3, axis='y')
+            else:
+                axes[1, 2].text(0.5, 0.5, 'Sem dados', ha='center', va='center', transform=axes[1, 2].transAxes)
+                axes[1, 2].set_title('Distribuição de Prioridades (sem dados)')
             
             plt.tight_layout()
-            viz_path = 'vrp_analysis.png'
+            # Salvar na pasta reports
+            reports_dir = "reports"
+            if not os.path.exists(reports_dir):
+                os.makedirs(reports_dir)
+            viz_path = os.path.join(reports_dir, 'vrp_analysis.png')
             plt.savefig(viz_path, dpi=300, bbox_inches='tight')
             plt.close()
             viz_files['main'] = viz_path

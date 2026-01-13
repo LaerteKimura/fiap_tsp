@@ -209,6 +209,13 @@ class VRPDetailsWindow:
                 depot_txt = self.font_small.render(f"{len(route.route)+1}. {depot_city} (RETORNO)", True, (0, 100, 200))
                 self.window.blit(depot_txt, (35, y))
                 y += 10
+            elif route.route and len(route.route) > 1:
+                # [CORREÇÃO] Sem depósito: mostrar retorno à primeira cidade
+                first_coord = route.route[0]
+                first_city = coord_to_city.get(first_coord, "?")
+                ret_txt = self.font_small.render(f"{len(route.route)+1}. {first_city} (RETORNO)", True, (0, 100, 200))
+                self.window.blit(ret_txt, (35, y))
+                y += 10
             
             y += 8
         
