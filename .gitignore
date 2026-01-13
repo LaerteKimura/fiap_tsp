@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+__pycache__
 
 # ===== Virtual environments =====
 venv/
@@ -14,3 +15,9 @@ env/
 vrp_final_solution_*.json
 vrp_solution_*.json
 relatorio_vrp*.pdf
+
+ANALISE_DADOS_VRP.md
+ANALISE_TSP.md
+ANALISE_VRP.md
+data_files/deliveries_TESTE_VRP.csv
+data_files/veiculos_TESTE_VRP.csv
