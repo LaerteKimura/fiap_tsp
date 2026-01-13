@@ -7,6 +7,7 @@ def show_analyze_menu():
         subtitle_text="Otimização TSP/VRP com Algoritmos Genéticos e Relatórios via LLM",
         options=[
             ("Analisar solução existente", "analyze"),
+            ("Abrir relatório existente", "open_report"),
             ("Criar nova solução", "new"),
             ("Sair", "skip"),
         ],

@@ -276,6 +276,15 @@ def export_solution_to_json(data, solution, mode, depot_city=None, export_path="
     else:
         raise ValueError(f"Modo desconhecido: {mode}")
 
+    # Criar pasta solutions se não existir
+    solutions_dir = "solutions"
+    if not os.path.exists(solutions_dir):
+        os.makedirs(solutions_dir)
+    
+    # Se apenas o nome do arquivo foi fornecido, colocar na pasta solutions
+    if not os.path.dirname(export_path):
+        export_path = os.path.join(solutions_dir, export_path)
+    
     export_dir = os.path.dirname(export_path)
     if export_dir and not os.path.exists(export_dir):
         os.makedirs(export_dir)

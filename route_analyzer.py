@@ -5,7 +5,7 @@ import textwrap
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Callable
 
 try:
     import google.generativeai as genai
@@ -37,93 +37,115 @@ except ImportError:
 
 
 class RouteAnalyzer:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, progress_callback: Optional[Callable[[str], None]] = None):
         self.api_key = api_key
         genai.configure(api_key=api_key)
         self.embedding_model = 'models/embedding-001'
         self.generation_model = 'gemini-3-flash-preview'
         self.solution_data = None
         self.embeddings_cache = {}
+        self.progress_callback = progress_callback or (lambda x: None)
         
     def load_solution(self, json_path: str) -> Dict:
         """Carrega arquivo JSON da solução."""
+        self.progress_callback(f"Carregando solução: {json_path}")
         print(f"\n📂 Carregando solução: {json_path}")
         
         with open(json_path, 'r', encoding='utf-8') as f:
             self.solution_data = json.load(f)
         
-        print(f"✅ Solução carregada: {self.solution_data['metadata']['mode']}")
+        mode = self.solution_data.get('metadata', {}).get('mode', 'N/A')
+        print(f"✅ Solução carregada: {mode}")
         return self.solution_data
     
     def create_text_chunks(self) -> List[Dict[str, str]]:
         """Cria chunks de texto para embeddings."""
+        self.progress_callback("Criando chunks de texto...")
         print("\n📝 Criando chunks de texto...")
         
         chunks = []
-        mode = self.solution_data['metadata']['mode']
+        metadata = self.solution_data.get('metadata', {})
+        mode = metadata.get('mode', 'N/A')
+        export_timestamp = metadata.get('export_timestamp', 'N/A')
+        description = metadata.get('description', 'N/A')
         
         chunks.append({
             'title': 'Resumo Geral',
             'text': f"""
 Modo: {mode}
-Data: {self.solution_data['metadata']['export_timestamp']}
-Descrição: {self.solution_data['metadata']['description']}
+Data: {export_timestamp}
+Descrição: {description}
             """.strip()
         })
         
         if mode == 'TSP':
-            solution = self.solution_data['solution']
+            solution = self.solution_data.get('solution', {})
+            selected_vehicle = solution.get('selected_vehicle', {})
+            vehicle_name = selected_vehicle.get('name', 'N/A')
+            total_distance = solution.get('total_distance_km', 0)
+            total_weight = solution.get('total_weight_kg', 0)
+            total_cost = solution.get('total_cost', 0)
+            route = solution.get('route', [])
+            
             chunks.append({
                 'title': 'Métricas Principais',
                 'text': f"""
-Veículo: {solution['selected_vehicle']['name']}
-Distância Total: {solution['total_distance_km']} km
-Peso Total: {solution['total_weight_kg']} kg
-Custo Total: R$ {solution['total_cost']}
-Número de Cidades: {len(solution['route'])}
+Veículo: {vehicle_name}
+Distância Total: {total_distance} km
+Peso Total: {total_weight} kg
+Custo Total: R$ {total_cost}
+Número de Cidades: {len(route)}
                 """.strip()
             })
             
-            for i, city_info in enumerate(solution['route'][:10]):
+            for i, city_info in enumerate(route[:10]):
+                deliveries = city_info.get('deliveries', [])
                 deliveries_text = "\n".join([
-                    f"  - {d['medicine']} (P{d['priority']}, {d['weight']}kg)"
-                    for d in city_info['deliveries']
+                    f"  - {d.get('medicine', 'N/A')} (P{d.get('priority', 'N/A')}, {d.get('weight', 0)}kg)"
+                    for d in deliveries
                 ])
                 chunks.append({
-                    'title': f"Cidade {i+1}: {city_info['city']}",
+                    'title': f"Cidade {i+1}: {city_info.get('city', 'N/A')}",
                     'text': f"""
-Sequência: {city_info['sequence']}
+Sequência: {city_info.get('sequence', 'N/A')}
 Entregas:
-{deliveries_text}
+{deliveries_text if deliveries_text else 'Nenhuma entrega'}
                     """.strip()
                 })
         
         else:
-            aggregate = self.solution_data['solution']['aggregate_stats']
+            solution = self.solution_data.get('solution', {})
+            aggregate = solution.get('aggregate_stats', {})
             chunks.append({
                 'title': 'Estatísticas Agregadas',
                 'text': f"""
-Número de Rotas: {aggregate['average_vehicles_used']}
-Custo Total: R$ {aggregate['total_cost']}
-Distância Total: {aggregate['total_distance_km']} km
-Peso Total: {aggregate['total_weight_kg']} kg
-Custo Médio por Veículo: R$ {aggregate['cost_per_vehicle']}
+Número de Rotas: {aggregate.get('average_vehicles_used', 'N/A')}
+Custo Total: R$ {aggregate.get('total_cost', 0)}
+Distância Total: {aggregate.get('total_distance_km', 0)} km
+Peso Total: {aggregate.get('total_weight_kg', 0)} kg
+Custo Médio por Veículo: R$ {aggregate.get('cost_per_vehicle', 0)}
                 """.strip()
             })
             
-            for route in self.solution_data['solution']['routes']:
+            routes = solution.get('routes', [])
+            for route_data in routes:
+                vehicle = route_data.get('vehicle', {})
+                stats = route_data.get('stats', {})
+                feasibility = route_data.get('feasibility', {})
+                cities = route_data.get('cities', [])
+                
                 route_text = f"""
-Rota {route['route_id']}
-Veículo: {route['vehicle']['name']} (ID: {route['vehicle']['id']})
-Distância: {route['stats']['total_distance_km']} km
-Peso: {route['stats']['total_weight_kg']} kg
-Custo: R$ {route['stats']['total_cost']}
-Prioridade Máxima: {route['stats']['max_priority']}
-Cidades: {len(route['cities'])}
-Viável: {'Sim' if route['feasibility']['is_feasible'] else 'Não'}
+Rota {route_data.get('route_id', 'N/A')}
+Veículo: {vehicle.get('name', 'N/A')} (ID: {vehicle.get('id', 'N/A')})
+Distância: {stats.get('total_distance_km', 0)} km
+Peso: {stats.get('total_weight_kg', 0)} kg
+Custo: R$ {stats.get('total_cost', 0)}
+Prioridade Máxima: {stats.get('max_priority', 'N/A')}
+Cidades: {len(cities)}
+Viável: {'Sim' if feasibility.get('is_feasible', False) else 'Não'}
                 """.strip()
                 chunks.append({
-                    'title': f"Rota {route['route_id']}",
+                    'title': f"Rota {route_data.get('route_id', 'N/A')}",
                     'text': route_text
                 })
         
@@ -132,6 +154,7 @@ Viável: {'Sim' if route['feasibility']['is_feasible'] else 'Não'}
     
     def generate_embeddings(self, chunks: List[Dict[str, str]]) -> pd.DataFrame:
         """Gera embeddings para os chunks."""
+        self.progress_callback("Gerando embeddings...")
         print("\n🔄 Gerando embeddings...")
         
         df = pd.DataFrame(chunks)
@@ -182,6 +205,7 @@ Viável: {'Sim' if route['feasibility']['is_feasible'] else 'Não'}
     
     def generate_analysis(self, df: pd.DataFrame) -> Dict[str, str]:
         """Gera análises usando Gemini."""
+        self.progress_callback("Gerando análises com Gemini...")
         print("\n🤖 Gerando análises com Gemini...")
         
         model = genai.GenerativeModel(self.generation_model)
@@ -196,7 +220,8 @@ Viável: {'Sim' if route['feasibility']['is_feasible'] else 'Não'}
             'recomendacoes': 'Forneça recomendações específicas para otimização'
         }
         
-        for key, query in queries.items():
+        for i, (key, query) in enumerate(queries.items(), 1):
+            self.progress_callback(f"Gerando análises com Gemini... ({i}/{len(queries)})")
             print(f"   Gerando: {key}")
             
             context = self.find_relevant_context(query, df, top_k=5)
@@ -226,6 +251,7 @@ Viável: {'Sim' if route['feasibility']['is_feasible'] else 'Não'}
     
     def create_visualizations(self) -> Dict[str, str]:
         """Cria visualizações da solução."""
+        self.progress_callback("Criando visualizações...")
         print("\n📊 Criando visualizações...")
         
         viz_files = {}
@@ -235,8 +261,10 @@ Viável: {'Sim' if route['feasibility']['is_feasible'] else 'Não'}
             fig, axes = plt.subplots(2, 2, figsize=(12, 10))
             fig.suptitle('Análise da Rota TSP', fontsize=16, fontweight='bold')
             
-            priorities = [d['priority'] for city in self.solution_data['solution']['route'] 
-                         for d in city['deliveries']]
+            solution = self.solution_data.get('solution', {})
+            route = solution.get('route', [])
+            priorities = [d.get('priority', 0) for city in route 
+                         for d in city.get('deliveries', [])]
             priority_counts = pd.Series(priorities).value_counts().sort_index()
             
             axes[0, 0].bar(['Alta (P0)', 'Média (P1)', 'Baixa (P2)'], 
@@ -245,8 +273,8 @@ Viável: {'Sim' if route['feasibility']['is_feasible'] else 'Não'}
             axes[0, 0].set_title('Distribuição de Prioridades')
             axes[0, 0].set_ylabel('Quantidade')
             
-            weights = [sum(d['weight'] for d in city['deliveries']) 
-                      for city in self.solution_data['solution']['route']]
+            weights = [sum(d.get('weight', 0) for d in city.get('deliveries', [])) 
+                      for city in route]
             axes[0, 1].plot(range(1, len(weights)+1), np.cumsum(weights), 
                            marker='o', color='blue')
             axes[0, 1].set_title('Peso Acumulado ao Longo da Rota')
@@ -254,10 +282,10 @@ Viável: {'Sim' if route['feasibility']['is_feasible'] else 'Não'}
             axes[0, 1].set_ylabel('Peso Acumulado (kg)')
             axes[0, 1].grid(True, alpha=0.3)
             
-            priority_positions = [(city['sequence'], 
-                                  min(d['priority'] for d in city['deliveries']))
-                                 for city in self.solution_data['solution']['route']
-                                 if city['deliveries']]
+            priority_positions = [(city.get('sequence', 0), 
+                                  min(d.get('priority', 2) for d in city.get('deliveries', [])))
+                                 for city in route
+                                 if city.get('deliveries')]
             if priority_positions:
                 seq, prio = zip(*priority_positions)
                 colors_map = {0: 'red', 1: 'orange', 2: 'green'}
@@ -270,11 +298,11 @@ Viável: {'Sim' if route['feasibility']['is_feasible'] else 'Não'}
                 axes[1, 0].set_yticklabels(['Alta', 'Média', 'Baixa'])
                 axes[1, 0].grid(True, alpha=0.3)
             
-            vehicle = self.solution_data['solution']['selected_vehicle']
+            vehicle = solution.get('selected_vehicle', {})
             metrics = {
-                'Distância': self.solution_data['solution']['total_distance_km'],
-                'Peso': self.solution_data['solution']['total_weight_kg'],
-                'Custo': self.solution_data['solution']['total_cost']
+                'Distância': solution.get('total_distance_km', 0),
+                'Peso': solution.get('total_weight_kg', 0),
+                'Custo': solution.get('total_cost', 0)
             }
             axes[1, 1].bar(metrics.keys(), metrics.values(), color='steelblue')
             axes[1, 1].set_title('Métricas Principais')
@@ -287,54 +315,63 @@ Viável: {'Sim' if route['feasibility']['is_feasible'] else 'Não'}
             viz_files['main'] = viz_path
         
         else:
-            routes = self.solution_data['solution']['routes']
+            solution = self.solution_data.get('solution', {})
+            routes = solution.get('routes', [])
             
             fig, axes = plt.subplots(2, 3, figsize=(15, 10))
             fig.suptitle('Análise VRP - Múltiplas Rotas', fontsize=16, fontweight='bold')
             
-            route_costs = [r['stats']['total_cost'] for r in routes]
-            axes[0, 0].bar(range(1, len(route_costs)+1), route_costs, color='steelblue')
-            axes[0, 0].set_title('Custo por Rota')
-            axes[0, 0].set_xlabel('Rota')
-            axes[0, 0].set_ylabel('Custo (R$)')
+            route_costs = [r.get('stats', {}).get('total_cost', 0) for r in routes]
+            if route_costs:
+                axes[0, 0].bar(range(1, len(route_costs)+1), route_costs, color='steelblue')
+                axes[0, 0].set_title('Custo por Rota')
+                axes[0, 0].set_xlabel('Rota')
+                axes[0, 0].set_ylabel('Custo (R$)')
             
-            route_distances = [r['stats']['total_distance_km'] for r in routes]
-            axes[0, 1].bar(range(1, len(route_distances)+1), route_distances, color='green')
-            axes[0, 1].set_title('Distância por Rota')
-            axes[0, 1].set_xlabel('Rota')
-            axes[0, 1].set_ylabel('Distância (km)')
+            route_distances = [r.get('stats', {}).get('total_distance_km', 0) for r in routes]
+            if route_distances:
+                axes[0, 1].bar(range(1, len(route_distances)+1), route_distances, color='green')
+                axes[0, 1].set_title('Distância por Rota')
+                axes[0, 1].set_xlabel('Rota')
+                axes[0, 1].set_ylabel('Distância (km)')
             
-            route_weights = [r['stats']['total_weight_kg'] for r in routes]
-            axes[0, 2].bar(range(1, len(route_weights)+1), route_weights, color='orange')
-            axes[0, 2].set_title('Peso por Rota')
-            axes[0, 2].set_xlabel('Rota')
-            axes[0, 2].set_ylabel('Peso (kg)')
+            route_weights = [r.get('stats', {}).get('total_weight_kg', 0) for r in routes]
+            if route_weights:
+                axes[0, 2].bar(range(1, len(route_weights)+1), route_weights, color='orange')
+                axes[0, 2].set_title('Peso por Rota')
+                axes[0, 2].set_xlabel('Rota')
+                axes[0, 2].set_ylabel('Peso (kg)')
             
-            vehicle_util = self.solution_data['analysis']['vehicle_utilization']
-            weight_utils = [v['weight_utilization_percent'] for v in vehicle_util]
-            distance_utils = [v['distance_utilization_percent'] for v in vehicle_util]
+            analysis = self.solution_data.get('analysis', {})
+            vehicle_util = analysis.get('vehicle_utilization', [])
+            if vehicle_util:
+                weight_utils = [v.get('weight_utilization_percent', 0) for v in vehicle_util]
+                distance_utils = [v.get('distance_utilization_percent', 0) for v in vehicle_util]
+                
+                x = np.arange(len(vehicle_util))
+                width = 0.35
+                axes[1, 0].bar(x - width/2, weight_utils, width, label='Peso', color='orange')
+                axes[1, 0].bar(x + width/2, distance_utils, width, label='Distância', color='blue')
+                axes[1, 0].set_title('Utilização de Veículos (%)')
+                axes[1, 0].set_xlabel('Rota')
+                axes[1, 0].set_ylabel('Utilização (%)')
+                axes[1, 0].legend()
+                axes[1, 0].set_xticks(x)
+                axes[1, 0].set_xticklabels([f"R{i+1}" for i in range(len(vehicle_util))])
             
-            x = np.arange(len(vehicle_util))
-            width = 0.35
-            axes[1, 0].bar(x - width/2, weight_utils, width, label='Peso', color='orange')
-            axes[1, 0].bar(x + width/2, distance_utils, width, label='Distância', color='blue')
-            axes[1, 0].set_title('Utilização de Veículos (%)')
-            axes[1, 0].set_xlabel('Rota')
-            axes[1, 0].set_ylabel('Utilização (%)')
-            axes[1, 0].legend()
-            axes[1, 0].set_xticks(x)
-            axes[1, 0].set_xticklabels([f"R{i+1}" for i in range(len(vehicle_util))])
-            
-            feasible = sum(1 for r in routes if r['feasibility']['is_feasible'])
+            feasible = sum(1 for r in routes if r.get('feasibility', {}).get('is_feasible', False))
             infeasible = len(routes) - feasible
-            axes[1, 1].pie([feasible, infeasible], labels=['Viável', 'Inviável'],
-                          colors=['green', 'red'], autopct='%1.1f%%')
-            axes[1, 1].set_title('Viabilidade das Rotas')
+            if feasible + infeasible > 0:
+                axes[1, 1].pie([feasible, infeasible], labels=['Viável', 'Inviável'],
+                              colors=['green', 'red'], autopct='%1.1f%%')
+                axes[1, 1].set_title('Viabilidade das Rotas')
             
             all_priorities = []
             for route in routes:
-                for city in route['cities']:
-                    all_priorities.extend([d['priority'] for d in city['deliveries']])
+                cities = route.get('cities', [])
+                for city in cities:
+                    deliveries = city.get('deliveries', [])
+                    all_priorities.extend([d.get('priority', 2) for d in deliveries])
             
             priority_counts = pd.Series(all_priorities).value_counts().sort_index()
             axes[1, 2].bar(['Alta (P0)', 'Média (P1)', 'Baixa (P2)'],
@@ -356,12 +393,22 @@ Viável: {'Sim' if route['feasibility']['is_feasible'] else 'Não'}
                           viz_files: Dict[str, str], 
                           output_path: str = None):
         """Gera relatório em PDF."""
+        self.progress_callback("Gerando relatório PDF...")
         print("\n📄 Gerando relatório PDF...")
+        
+        # Criar pasta reports se não existir
+        reports_dir = "reports"
+        if not os.path.exists(reports_dir):
+            os.makedirs(reports_dir)
         
         if output_path is None:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            mode = self.solution_data['metadata']['mode'].lower()
-            output_path = f"relatorio_{mode}_{timestamp}.pdf"
+            metadata = self.solution_data.get('metadata', {})
+            mode = metadata.get('mode', 'unknown').lower()
+            output_path = os.path.join(reports_dir, f"relatorio_{mode}_{timestamp}.pdf")
+        elif not os.path.dirname(output_path):
+            # Se apenas o nome do arquivo foi fornecido, colocar na pasta reports
+            output_path = os.path.join(reports_dir, output_path)
         
         doc = SimpleDocTemplate(output_path, pagesize=A4)
         story = []

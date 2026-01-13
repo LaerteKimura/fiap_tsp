@@ -28,11 +28,14 @@ def calculate_route_weight(route: List[Tuple[int, int]],
                            deliveries_by_city: Dict) -> float:
     """
     Calcula o peso total de uma rota em kg.
+    [CORREÇÃO] Evita contar peso duplicado se uma cidade aparecer múltiplas vezes na rota.
     """
     total = 0.0
+    cities_seen = set()  # Evitar contar peso duplicado se cidade aparecer múltiplas vezes
     for coord in route:
-        city = coord_to_city[coord]
-        if city in deliveries_by_city:
+        city = coord_to_city.get(coord)
+        if city and city in deliveries_by_city and city not in cities_seen:
+            cities_seen.add(city)
             for d in deliveries_by_city[city]:
                 total += d.total_weight
     return total
@@ -43,16 +46,29 @@ def calculate_route_distance(route: List[Tuple[int, int]],
                              distance_lookup: Dict[Tuple[str, str], float]) -> float:
     """
     Calcula a distância total de uma rota em km.
+    [CORREÇÃO] Evita calcular distância de cidade para ela mesma (ex: depósito->depósito)
     """
     if len(route) < 2:
         return 0.0
     
     dist = 0.0
-    for i in range(len(route)):
-        city1 = coord_to_city[route[i]]
-        city2 = coord_to_city[route[(i + 1) % len(route)]]
-        dist += distance_lookup.get((city1, city2), 
-               distance_lookup.get((city2, city1), 0.0))
+    for i in range(len(route) - 1):  # Não usar % para evitar loop fechado desnecessário
+        coord1 = route[i]
+        coord2 = route[i + 1]
+        
+        # Se são as mesmas coordenadas, distância é 0 (ex: depósito->depósito)
+        if coord1 == coord2:
+            continue
+            
+        city1 = coord_to_city.get(coord1)
+        city2 = coord_to_city.get(coord2)
+        
+        if city1 and city2:
+            # Tenta ambas as direções (A->B ou B->A)
+            distance = distance_lookup.get((city1, city2))
+            if distance is None:
+                distance = distance_lookup.get((city2, city1), 0.0)
+            dist += distance
     
     return dist
 

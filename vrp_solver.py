@@ -34,7 +34,14 @@ class VRPOptions:
             'duplicate_vehicle': 1000000,
             'weight_violation': 200000,
             'distance_violation': 200000,
+            'underutilization': 500.0,  # Penalidade por subutilização de capacidade (peso)
+            'distance_underutilization': 100.0,  # Penalidade por subutilização de distância
         }
+        
+        # Threshold de utilização mínima (abaixo disso aplica penalidade)
+        # Ex: 0.6 = 60% - veículos com menos de 60% de utilização são penalizados
+        self.MIN_UTILIZATION_THRESHOLD = 0.6  # 60% de utilização mínima de peso
+        self.MIN_DISTANCE_UTILIZATION_THRESHOLD = 0.5  # 50% de utilização mínima de distância
         
         self.MUTATION_RATES = {
             'swap_between_routes': 0.4,
@@ -80,7 +87,13 @@ class VRPRoute:
         
         # Distância
         if self.depot_coord:
-            full_route = [self.depot_coord] + self.route + [self.depot_coord]
+            # [CORREÇÃO] Se o depósito já é a primeira cidade na rota, não adicionar no início
+            if self.route and self.route[0] == self.depot_coord:
+                # Depósito já está no início, apenas adicionar no final
+                full_route = self.route + [self.depot_coord]
+            else:
+                # Depósito não está na rota, adicionar no início e fim
+                full_route = [self.depot_coord] + self.route + [self.depot_coord]
             self.total_distance = calculate_route_distance(
                 full_route, coord_to_city, distance_lookup
             )
@@ -99,8 +112,16 @@ class VRPRoute:
         self.total_cost = (self.total_distance * self.vehicle.cost_per_km) + VRP_FIXED_COST_PER_ROUTE
         
         # Calcular violações
-        self.weight_violation = max(0, self.total_weight - self.vehicle.max_weight)
-        self.distance_violation = max(0, self.total_distance - self.vehicle.max_distance)
+        # [CORREÇÃO] Usar pequeno epsilon para evitar problemas de precisão de ponto flutuante
+        # Ex: 1200.0000001 vs 1200 pode dar falso positivo sem epsilon
+        WEIGHT_EPSILON = 0.01  # 10g de tolerância para erros de arredondamento em peso
+        DISTANCE_EPSILON = 0.1  # 100m de tolerância para erros de arredondamento em distância
+        # Violação ocorre apenas se exceder o limite por mais que EPSILON
+        weight_excess = self.total_weight - self.vehicle.max_weight
+        distance_excess = self.total_distance - self.vehicle.max_distance
+        # Se exceder por menos que EPSILON, considera dentro da margem de tolerância
+        self.weight_violation = max(0, weight_excess - WEIGHT_EPSILON) if weight_excess > WEIGHT_EPSILON else 0
+        self.distance_violation = max(0, distance_excess - DISTANCE_EPSILON) if distance_excess > DISTANCE_EPSILON else 0
         self.is_feasible = (self.weight_violation == 0 and self.distance_violation == 0)
         
         # Prioridades
@@ -249,6 +270,32 @@ def calculate_vrp_fitness(solution, coord_to_city, deliveries_by_city,
         
         # 6. Cidades cobertas
         covered_cities.update(route.cities)
+        
+        # 7. [MELHORIA] Penalidade por subutilização de capacidade (peso)
+        # Penaliza veículos que estão muito "vazios" para incentivar melhor utilização
+        # Baseado em: "Vehicle Routing Problem with Utilization Constraints" (literatura VRP)
+        if route.is_feasible and route.vehicle.max_weight > 0:
+            weight_utilization = route.total_weight / route.vehicle.max_weight
+            if weight_utilization < options.MIN_UTILIZATION_THRESHOLD:
+                # Penalidade proporcional à capacidade não utilizada
+                unused_capacity_ratio = 1.0 - weight_utilization
+                # Penalidade maior para veículos maiores subutilizados
+                capacity_factor = route.vehicle.max_weight / 1000.0  # Normalizar por 1000kg
+                underutilization_penalty = (unused_capacity_ratio ** 2) * options.WEIGHTS['underutilization'] * capacity_factor
+                fitness += underutilization_penalty
+        
+        # 8. [MELHORIA] Penalidade por subutilização de distância
+        # Penaliza veículos que percorrem muito menos distância do que podem
+        # Incentiva usar veículos com alcance adequado à rota
+        if route.is_feasible and route.vehicle.max_distance > 0:
+            distance_utilization = route.total_distance / route.vehicle.max_distance
+            if distance_utilization < options.MIN_DISTANCE_UTILIZATION_THRESHOLD:
+                # Penalidade proporcional à distância não utilizada
+                unused_distance_ratio = 1.0 - distance_utilization
+                # Penalidade maior para veículos com maior alcance subutilizados
+                distance_factor = route.vehicle.max_distance / 1000.0  # Normalizar por 1000km
+                distance_underutilization_penalty = (unused_distance_ratio ** 2) * options.WEIGHTS['distance_underutilization'] * distance_factor
+                fitness += distance_underutilization_penalty
     
     # Penalidade por cidades não cobertas
     expected_cities = {coord_to_city.get(c) for c in all_cities_coords if coord_to_city.get(c)}
@@ -349,6 +396,11 @@ def adaptive_crossover(parent_a, parent_b, depot_coord, options, generation, max
             shortest_route = min(result, key=lambda r: len(r.route))
             shortest_route.route.append(city)
     
+    # [CORREÇÃO] Garantir que depósito seja sempre a primeira cidade em cada rota
+    if depot_coord:
+        for route in result:
+            route.route = ensure_depot_first(route.route, depot_coord)
+    
     return result
 
 
@@ -378,13 +430,23 @@ def feasibility_mutation(solution, depot_coord, options, generation,
                                key=lambda r: max(r.weight_violation, r.distance_violation))
             
             if len(route_to_split.route) >= 3:
-                split_point = len(route_to_split.route) // 2
-                first_half = route_to_split.route[:split_point]
-                second_half = route_to_split.route[split_point:]
+                # [CORREÇÃO] Se depósito está na primeira posição, não dividir incluindo ele
+                if depot_coord and route_to_split.route and route_to_split.route[0] == depot_coord:
+                    # Depósito fica na primeira rota, dividir o resto
+                    split_point = 1 + (len(route_to_split.route) - 1) // 2
+                    first_half = route_to_split.route[:split_point]
+                    second_half = route_to_split.route[split_point:]
+                else:
+                    split_point = len(route_to_split.route) // 2
+                    first_half = route_to_split.route[:split_point]
+                    second_half = route_to_split.route[split_point:]
                 
                 # Usar mesmo veículo ou encontrar outro
                 route_to_split.route = first_half
                 new_route = VRPRoute(route_to_split.vehicle, second_half, depot_coord)
+                # [CORREÇÃO] Garantir que depósito fique no início da segunda rota se presente
+                if depot_coord and depot_coord in new_route.route:
+                    new_route.route = ensure_depot_first(new_route.route, depot_coord)
                 new_solution.append(new_route)
     
     # 2. MOVER CIDADES PESADAS
@@ -415,26 +477,47 @@ def feasibility_mutation(solution, depot_coord, options, generation,
         if len(non_empty) >= 2:
             r1, r2 = random.sample(non_empty, 2)
             if r1.route and r2.route:
-                c1 = random.choice(r1.route)
-                c2 = random.choice(r2.route)
-                r1.route.remove(c1)
-                r2.route.remove(c2)
-                r1.route.append(c2)
-                r2.route.append(c1)
+                # [CORREÇÃO] Não trocar o depósito se ele for a primeira cidade
+                available_c1 = [c for c in r1.route if not (depot_coord and c == depot_coord and r1.route[0] == depot_coord)]
+                available_c2 = [c for c in r2.route if not (depot_coord and c == depot_coord and r2.route[0] == depot_coord)]
+                
+                if available_c1 and available_c2:
+                    c1 = random.choice(available_c1)
+                    c2 = random.choice(available_c2)
+                    r1.route.remove(c1)
+                    r2.route.remove(c2)
+                    r1.route.append(c2)
+                    r2.route.append(c1)
     
     # 4. TROCAS DENTRO DA ROTA (para prioridade)
     if random.random() < options.MUTATION_RATES['swap_within_route'] * base_rate:
         for route in new_solution:
             if len(route.route) >= 2:
-                i, j = random.sample(range(len(route.route)), 2)
-                route.route[i], route.route[j] = route.route[j], route.route[i]
+                # [CORREÇÃO] Não trocar a primeira posição se for o depósito
+                if depot_coord and route.route and route.route[0] == depot_coord:
+                    if len(route.route) >= 3:
+                        i, j = random.sample(range(1, len(route.route)), 2)
+                        route.route[i], route.route[j] = route.route[j], route.route[i]
+                else:
+                    i, j = random.sample(range(len(route.route)), 2)
+                    route.route[i], route.route[j] = route.route[j], route.route[i]
     
     # 5. INVERTER SEGMENTO
     if random.random() < options.MUTATION_RATES['reverse_segment'] * base_rate:
         for route in new_solution:
             if len(route.route) >= 4:
-                i, j = sorted(random.sample(range(1, len(route.route) - 1), 2))
-                route.route[i:j] = reversed(route.route[i:j])
+                # [CORREÇÃO] Não inverter incluindo a primeira posição se for o depósito
+                if depot_coord and route.route and route.route[0] == depot_coord:
+                    i, j = sorted(random.sample(range(1, len(route.route) - 1), 2))
+                    route.route[i:j] = reversed(route.route[i:j])
+                else:
+                    i, j = sorted(random.sample(range(1, len(route.route) - 1), 2))
+                    route.route[i:j] = reversed(route.route[i:j])
+    
+    # [CORREÇÃO] Garantir que depósito seja sempre a primeira cidade após mutações
+    if depot_coord:
+        for route in new_solution:
+            route.route = ensure_depot_first(route.route, depot_coord)
     
     return new_solution
 
@@ -442,10 +525,41 @@ def feasibility_mutation(solution, depot_coord, options, generation,
 # =========================
 # OTIMIZAÇÃO LOCAL
 # =========================
-def optimize_route_order(route_coords, coord_to_city, deliveries_by_city):
+def ensure_depot_first(route_coords, depot_coord):
+    """Garante que o depósito seja sempre a primeira cidade na rota se presente."""
+    if not depot_coord or not route_coords:
+        return route_coords
+    
+    if depot_coord in route_coords:
+        # Remover depósito de onde estiver
+        route_coords = [c for c in route_coords if c != depot_coord]
+        # Colocar no início
+        route_coords.insert(0, depot_coord)
+    
+    return route_coords
+
+
+def optimize_route_order(route_coords, coord_to_city, deliveries_by_city, depot_coord=None):
     """Reordena rota para prioridades altas primeiro."""
     if len(route_coords) < 2:
         return route_coords
+    
+    # [CORREÇÃO] Se a cidade do depósito estiver na rota, garantir que seja a primeira
+    if depot_coord and depot_coord in route_coords:
+        # Remover depósito da lista temporariamente
+        route_without_depot = [c for c in route_coords if c != depot_coord]
+        # Ordenar o resto por prioridade
+        city_priority = {}
+        for coord in route_without_depot:
+            city = coord_to_city.get(coord)
+            if city and city in deliveries_by_city:
+                priorities = [d.priority for d in deliveries_by_city[city]]
+                city_priority[coord] = min(priorities) if priorities else 2
+            else:
+                city_priority[coord] = 2
+        sorted_route = sorted(route_without_depot, key=lambda c: city_priority[c])
+        # Colocar depósito no início
+        return [depot_coord] + sorted_route
     
     # Calcular prioridade de cada cidade
     city_priority = {}
@@ -566,6 +680,8 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
                 break
         # print(f"🏭 Depósito: {depot_city}")
     
+    # [CORREÇÃO] Se o depósito tem entregas, ele deve estar na rota mas sempre como primeira cidade
+    # Não remover de cities_coords, mas garantir que seja sempre colocado no início
     all_cities_set = set(cities_coords)
     
     # Ordenar veículos por capacidade
@@ -580,19 +696,35 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
         # Diversidade na população inicial
         if i < POPULATION_SIZE // 3:
             # 1 veículo grande
-            solution = [VRPRoute(vehicles_sorted[0], cities_coords[:], depot_coord)]
+            route_coords = cities_coords[:]
+            # [CORREÇÃO] Se depósito tem entregas, colocá-lo no início
+            if depot_coord and depot_coord in route_coords:
+                route_coords.remove(depot_coord)
+                route_coords.insert(0, depot_coord)
+            solution = [VRPRoute(vehicles_sorted[0], route_coords, depot_coord)]
         elif i < 2 * POPULATION_SIZE // 3:
             # 2 veículos
             if len(vehicles_sorted) >= 2:
                 split_point = len(cities_coords) // 2
                 route1 = cities_coords[:split_point]
                 route2 = cities_coords[split_point:]
+                # [CORREÇÃO] Se depósito tem entregas, colocá-lo no início da primeira rota
+                if depot_coord and depot_coord in route1:
+                    route1.remove(depot_coord)
+                    route1.insert(0, depot_coord)
+                elif depot_coord and depot_coord in route2:
+                    route2.remove(depot_coord)
+                    route2.insert(0, depot_coord)
                 solution = [
                     VRPRoute(vehicles_sorted[0], route1, depot_coord),
                     VRPRoute(vehicles_sorted[1], route2, depot_coord)
                 ]
             else:
-                solution = [VRPRoute(vehicles_sorted[0], cities_coords[:], depot_coord)]
+                route_coords = cities_coords[:]
+                if depot_coord and depot_coord in route_coords:
+                    route_coords.remove(depot_coord)
+                    route_coords.insert(0, depot_coord)
+                solution = [VRPRoute(vehicles_sorted[0], route_coords, depot_coord)]
         else:
             # Aleatório
             solution = build_random_solution(cities_coords, vehicles_sorted, depot_coord)
@@ -694,9 +826,20 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
                 solution = [VRPRoute(v, [], depot_coord) for v in selected]
                 
                 # Distribuir igualmente
-                for idx, coord in enumerate(cities_coords):
+                cities_to_distribute = cities_coords[:]
+                # [CORREÇÃO] Se depósito tem entregas, removê-lo temporariamente
+                depot_in_list = False
+                if depot_coord and depot_coord in cities_to_distribute:
+                    cities_to_distribute.remove(depot_coord)
+                    depot_in_list = True
+                
+                for idx, coord in enumerate(cities_to_distribute):
                     route_idx = idx % len(solution)
                     solution[route_idx].route.append(coord)
+                
+                # [CORREÇÃO] Colocar depósito no início da primeira rota
+                if depot_in_list and solution:
+                    solution[0].route.insert(0, depot_coord)
                 
                 new_population.append(solution)
             
@@ -773,7 +916,7 @@ def solve_vrp(cities_coords, coord_to_city, deliveries_by_city,
         # Otimizar ordem por prioridade
         for route in best_solution:
             if route.route:
-                route.route = optimize_route_order(route.route, coord_to_city, deliveries_by_city)
+                route.route = optimize_route_order(route.route, coord_to_city, deliveries_by_city, depot_coord)
                 route.calculate_stats(coord_to_city, deliveries_by_city, distance_lookup)
     
     final_solution = [r for r in best_solution if r.route] if best_solution else []

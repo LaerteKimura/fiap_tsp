@@ -13,11 +13,16 @@ ENV/
 env/
 
 vrp_final_solution_*.json
+tsp_solution_*.json
 vrp_solution_*.json
 relatorio_vrp*.pdf
+relatorio_tsp*.pdf
 
 ANALISE_DADOS_VRP.md
 ANALISE_TSP.md
 ANALISE_VRP.md
+ANALISE_VRP_ALGORITMO.md
+CORRECAO_DEPOSITO_VRP.md
+PENALIDADE_SUBUTILIZACAO_VRP.md
 data_files/deliveries_TESTE_VRP.csv
 data_files/veiculos_TESTE_VRP.csv
