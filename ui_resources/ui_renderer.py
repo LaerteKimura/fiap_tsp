@@ -530,6 +530,10 @@ def render_map_with_vrp_routes(screen: pygame.Surface,
         if depot_coord and route:
             depot_route = [depot_coord] + route + [depot_coord]
             draw_paths(screen, depot_route, route_color, 3)
+        elif route and len(route) > 1:
+            # [CORREÇÃO] Sem depósito: fechar a rota adicionando primeira cidade no final
+            closed_route = route + [route[0]]
+            draw_paths(screen, closed_route, route_color, 3)
         else:
             draw_paths(screen, route, route_color, 3)
     

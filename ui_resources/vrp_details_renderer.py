@@ -31,6 +31,7 @@ def render_vrp_details_panel(
     *,
     panel_rect: pygame.Rect,
     scroll_y: int = 0,
+    distance_lookup: Optional[Dict] = None,
 ) -> int:
     """
     Renderiza o painel de detalhes VRP no estilo novo (título flutuante + card),
@@ -279,16 +280,28 @@ def render_vrp_details_panel(
         content.blit(font_label.render("Entregas (ordem do trajeto)", True, (20, 30, 30)), (title_x, my))
         my += 18
 
-        def draw_city_line(seq: str, city_name: str, col: tuple, suffix: str = ""):
+        def draw_city_line(seq: str, city_name: str, col: tuple, suffix: str = "", distance_info: str = ""):
             nonlocal my
             pygame.draw.circle(content, col, (title_x + 6, my + 7), 4)
             pygame.draw.circle(content, (40, 45, 55), (title_x + 6, my + 7), 4, 1)
-            content.blit(font_tiny.render(f"{seq}. {city_name}{suffix}", True, (40, 45, 55)), (title_x + 18, my))
+            city_text = f"{seq}. {city_name}{suffix}"
+            if distance_info:
+                city_text += f"  → {distance_info}"
+            content.blit(font_tiny.render(city_text, True, (40, 45, 55)), (title_x + 18, my))
             my += 16
 
         # DEP
         if depot_city:
-            draw_city_line("0", f"{depot_city} (DEP)", (0, 100, 200))
+            # Calcular distância do depósito para a primeira cidade
+            distance_info = ""
+            if distance_lookup and route.route:
+                first_coord = route.route[0]
+                first_city = coord_to_city.get(first_coord, "")
+                if first_city:
+                    dist = distance_lookup.get((depot_city, first_city)) or distance_lookup.get((first_city, depot_city), 0.0)
+                    if dist > 0:
+                        distance_info = f"{_fmt_ptbr(dist, 1)} km"
+            draw_city_line("0", f"{depot_city} (DEP)", (0, 100, 200), distance_info=distance_info)
 
         # Cidades
         for idx_city, coord in enumerate(route.route):
@@ -303,11 +316,54 @@ def render_vrp_details_panel(
                 deliveries_info = f"  {n_del}x · {_fmt_ptbr(w_city, 0)} kg"
 
             suffix = f" [{pr_text.split()[0]}]{deliveries_info}"
-            draw_city_line(str(idx_city + 1), full_city, pr_col, suffix=suffix)
+            
+            # Calcular distância da cidade anterior para a atual
+            distance_info = ""
+            if distance_lookup:
+                if idx_city == 0:
+                    # Primeira cidade: distância do depósito (se houver)
+                    if depot_city:
+                        dist = distance_lookup.get((depot_city, full_city)) or distance_lookup.get((full_city, depot_city), 0.0)
+                        if dist > 0:
+                            distance_info = f"{_fmt_ptbr(dist, 1)} km"
+                else:
+                    # Cidade subsequente: distância da cidade anterior
+                    prev_coord = route.route[idx_city - 1]
+                    prev_city = coord_to_city.get(prev_coord, "")
+                    if prev_city:
+                        dist = distance_lookup.get((prev_city, full_city)) or distance_lookup.get((full_city, prev_city), 0.0)
+                        if dist > 0:
+                            distance_info = f"{_fmt_ptbr(dist, 1)} km"
+            
+            draw_city_line(str(idx_city + 1), full_city, pr_col, suffix=suffix, distance_info=distance_info)
 
-        # RET
+        # RET ou retorno à primeira cidade (se não houver depósito)
         if depot_city:
-            draw_city_line(str(len(route.route) + 1), f"{depot_city} (RET)", (0, 100, 200))
+            # Calcular distância da última cidade para o depósito
+            distance_info = ""
+            if distance_lookup and route.route:
+                last_coord = route.route[-1]
+                last_city = coord_to_city.get(last_coord, "")
+                if last_city:
+                    dist = distance_lookup.get((last_city, depot_city)) or distance_lookup.get((depot_city, last_city), 0.0)
+                    if dist > 0:
+                        distance_info = f"{_fmt_ptbr(dist, 1)} km"
+            draw_city_line(str(len(route.route) + 1), f"{depot_city} (RET)", (0, 100, 200), distance_info=distance_info)
+        elif route.route and len(route.route) > 1:
+            # [CORREÇÃO] Sem depósito: mostrar retorno à primeira cidade
+            first_coord = route.route[0]
+            first_city = coord_to_city.get(first_coord, "?")
+            last_coord = route.route[-1]
+            last_city = coord_to_city.get(last_coord, "")
+            
+            # Calcular distância da última cidade para a primeira
+            distance_info = ""
+            if distance_lookup and first_city and last_city and first_city != last_city:
+                dist = distance_lookup.get((last_city, first_city)) or distance_lookup.get((first_city, last_city), 0.0)
+                if dist > 0:
+                    distance_info = f"{_fmt_ptbr(dist, 1)} km"
+            
+            draw_city_line(str(len(route.route) + 1), f"{first_city} (RET)", (0, 100, 200), distance_info=distance_info)
 
         y += card_h + 12
 

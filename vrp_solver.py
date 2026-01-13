@@ -98,9 +98,19 @@ class VRPRoute:
                 full_route, coord_to_city, distance_lookup
             )
         else:
-            self.total_distance = calculate_route_distance(
-                self.route, coord_to_city, distance_lookup
-            )
+            # [CORREÇÃO] Sem depósito, mas a rota deve ser fechada (voltar para a primeira cidade)
+            if len(self.route) > 1:
+                # Adicionar retorno à primeira cidade para fechar a rota
+                closed_route = self.route + [self.route[0]]
+                self.total_distance = calculate_route_distance(
+                    closed_route, coord_to_city, distance_lookup
+                )
+            elif len(self.route) == 1:
+                # Rota com apenas uma cidade, distância é 0 (já está no destino)
+                self.total_distance = 0.0
+            else:
+                # Rota vazia
+                self.total_distance = 0.0
         
         # Peso
         self.total_weight = calculate_route_weight(

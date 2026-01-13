@@ -266,6 +266,7 @@ def run_vrp_mode(data, ga_config, depot_city, export_fn=None):
             iteration,
             panel_rect=details_rect,
             scroll_y=details_scroll,
+            distance_lookup=distance_lookup,
         )
 
         details_scroll = max(0, min(details_scroll, max_details_scroll))
