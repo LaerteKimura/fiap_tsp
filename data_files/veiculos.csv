@@ -3,5 +3,6 @@ id,name,max_capacity,max_distance,cost_per_km,max_weight
 2,Moto 2,50,150,0.8,80
 3,Van 1,1000,600,1.2,600
 4,Caminhao Pequeno 1,3000,800,1.8,1200
-5,Caminhao Grande 1,8000,4000,4.5,3500
-6,Caminhao Agregado,8000,4000,1.5,3500
+5,Caminhao Grande 1,8000,1200,4.5,3500
+6,Caminhao Agregado,8000,1000,1.5,3500
+7,Caminhao Xtra,8000,1000,4.5,3000

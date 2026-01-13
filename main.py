@@ -19,13 +19,33 @@ import os
 os.environ["SDL_VIDEO_CENTERED"] = "1"
 
 def run_analyze_flow():
-    """Executa o modo análise e encerra o app."""
-    pygame.quit()
+    """Executa o modo análise com interface gráfica."""
+    from views.analyze_view import run_analyze_mode
     try:
-        route_analyzer.main()
+        run_analyze_mode()
     except Exception as e:
         print(f"Erro ao executar análise: {e}")
-    sys.exit()
+    # Retorna ao menu inicial após análise
+    return
+
+def run_open_report_flow():
+    """Executa o modo de abrir relatório existente."""
+    from views.open_report_view import show_open_report_menu
+    pygame.init()
+    
+    WIDTH, HEIGHT = 900, 600
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Abrir Relatório PDF")
+    clock = pygame.time.Clock()
+    
+    try:
+        show_open_report_menu(screen, clock)
+    except Exception as e:
+        print(f"Erro ao abrir relatório: {e}")
+    finally:
+        pygame.quit()
+    # Retorna ao menu inicial
+    return
 
 def run_solver_flow(data):
     """
@@ -74,6 +94,8 @@ def run_main_menu_flow(data):
 
         if initial_choice == "analyze":
             run_analyze_flow()
+        elif initial_choice == "open_report":
+            run_open_report_flow()
 
         run_solver_flow(data)
 
