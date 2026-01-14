@@ -1,4 +1,4 @@
-# 🚚 Sistema de Otimização de Rotas com Algoritmos Genéticos
+# Sistema de Otimização de Rotas com Algoritmos Genéticos
 
 Sistema completo de otimização de rotas de entrega utilizando **Algoritmos Genéticos** para resolver problemas de **TSP (Traveling Salesman Problem)** e **VRP (Vehicle Routing Problem)**, com análise avançada usando **Google Gemini AI**.
 
@@ -8,7 +8,7 @@ Sistema completo de otimização de rotas de entrega utilizando **Algoritmos Gen
 
 ---
 
-## 📋 Índice
+## Índice
 
 - [Características](#-características)
 - [Instalação](#-instalação)
@@ -29,20 +29,20 @@ Sistema completo de otimização de rotas de entrega utilizando **Algoritmos Gen
 
 ---
 
-## 🎯 Características
+## Características
 
-- ✅ **Dois modos de otimização**: TSP (rota única) e VRP (múltiplas rotas)
-- ✅ **Algoritmos Genéticos customizáveis**: 3 mutações, 3 seleções, 3 crossovers
-- ✅ **Visualização em tempo real**: Mapa de São Paulo com rotas animadas
-- ✅ **Sistema de prioridades**: Entregas alta (P0), média (P1) e baixa (P2)
-- ✅ **Restrições realistas**: Capacidade de peso e autonomia de veículos
-- ✅ **Análise com IA**: Relatórios executivos usando Google Gemini
-- ✅ **Exportação de dados**: JSON estruturado e relatórios PDF
-- ✅ **Interface interativa**: Controles em tempo real e gráficos de evolução
+- **Dois modos de otimização**: TSP (rota única) e VRP (múltiplas rotas)
+- **Algoritmos Genéticos customizáveis**: 3 mutações, 3 seleções, 3 crossovers
+- **Visualização em tempo real**: Mapa de São Paulo com rotas animadas
+- **Sistema de prioridades**: Entregas alta (P0), média (P1) e baixa (P2)
+- **Restrições realistas**: Capacidade de peso e autonomia de veículos
+- **Análise com IA**: Relatórios executivos usando Google Gemini
+- **Exportação de dados**: JSON estruturado e relatórios PDF
+- **Interface interativa**: Controles em tempo real e gráficos de evolução
 
 ---
 
-## 📦 Instalação
+## Instalação
 
 ### 1. Requisitos do Sistema
 
@@ -75,7 +75,11 @@ venv\Scripts\activate
 ### 4. Instalar Dependências
 
 ```bash
+# Dependências de produção
 pip install -r requirements.txt
+
+# Dependências de desenvolvimento (incluindo testes)
+pip install -r requirements-dev.txt
 ```
 
 **Dependências principais:**
@@ -95,7 +99,7 @@ pip list          # Verifica pacotes instalados
 
 ---
 
-## 🚀 Início Rápido
+## Início Rápido
 
 ### Execução Básica
 
@@ -122,7 +126,7 @@ python tsp.py
 
 ```bash
 # 1. Iniciar o sistema
-python tsp.py
+python main.py
 
 # 2. Escolher "N" (Nova solução)
 
@@ -144,47 +148,82 @@ python tsp.py
 
 ---
 
-## 📁 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
-otimizacao-rotas/
+fiap_tsp/
 │
-├── tsp.py                          # Script principal
-├── vrp_solver.py                   # Solver VRP
-├── genetic_algorithm.py            # Operadores genéticos
-├── route_analyzer.py               # Análise com IA
-├── config.py                       # Configurações globais
+├── main.py                          # Script principal
+├── genetic_algorithm.py             # Core do Algoritmo Genético
+├── vrp_solver.py                    # Solver VRP
+├── route_analyzer.py                # Análise com IA
+├── route_helpers.py                 # Funções auxiliares
+├── sp_map.py                        # Renderização de mapa
 │
-├── ui_resources/
-│   ├── ga_menu_gui.py             # Menu de configuração GA
-│   └── ui_renderer.py             # Renderização da interface
+├── config/                          # Configurações
+│   ├── ga_config.py                # Config AG
+│   ├── ui_layout.py                # Layout UI
+│   └── ui_theme.py                 # Tema visual
 │
-├── loader_resources/
-│   ├── data_loader.py             # Carregador de dados
-│   ├── delivery_loader.py         # Loader de entregas
-│   ├── vehicle_loader.py          # Loader de veículos
-│   └── city_loader.py             # Loader de cidades
+├── views/                           # Camada de apresentação
+│   ├── menu_inicial.py             # Menu principal
+│   ├── mode_selection.py           # Seleção TSP/VRP
+│   ├── ga_menu.py                  # Menu AG
+│   ├── tsp_view.py                 # Execução TSP
+│   ├── vrp_view.py                 # Execução VRP
+│   ├── analyze_view.py             # Análise e chat
+│   └── open_report_view.py         # Abrir relatórios
 │
-├── data_files/
-│   ├── deliveries.csv             # Entregas (id, remédio, cidade, prioridade)
-│   ├── veiculos.csv               # Veículos (capacidade, autonomia, custo)
-│   ├── cidades_sp.tsv             # Distâncias entre cidades
-│   ├── worldcities.csv            # Coordenadas geográficas
-│   └── geojs-35-mun.json          # GeoJSON de São Paulo
+├── ui_resources/                    # Recursos de UI
+│   ├── ui_renderer.py              # Renderização principal
+│   ├── draw_functions.py           # Funções de desenho
+│   └── vrp_details_renderer.py     # Detalhes VRP
 │
-├── sp_map.py                       # Renderização de mapa
-├── vrp_details_renderer.py         # Detalhes das rotas
-├── vrp_menu_gui.py                 # Menu VRP
-├── route_helpers.py                # Funções auxiliares
-├── draw_functions.py               # Funções de desenho
+├── loader_resources/                # Carregadores de dados
+│   ├── data_loader.py              # Loader principal
+│   ├── delivery_loader.py          # Entregas
+│   ├── vehicle_loader.py           # Veículos
+│   └── city_loader.py              # Cidades
 │
-├── requirements.txt                # Dependências
-└── README.md                       # Este arquivo
+├── infra/                           # Infraestrutura
+│   └── solution_exporter.py        # Export JSON
+│
+├── data_files/                      # Dados do problema
+│   ├── deliveries.csv              # Entregas
+│   ├── veiculos.csv                # Veículos
+│   ├── cidades_sp.tsv              # Distâncias
+│   ├── worldcities.csv             # Coordenadas
+│   └── geojs-35-mun.json           # GeoJSON SP
+│
+├── tests/                           # Testes automatizados
+│   ├── conftest.py                 # Fixtures
+│   ├── test_loaders.py             # Testes loaders
+│   ├── test_genetic_algorithm.py   # Testes AG
+│   ├── test_constraints.py         # Testes restrições
+│   ├── test_export.py              # Testes export
+│   ├── test_vrp_solver.py          # Testes VRP
+│   └── README.md                   # Doc testes
+│
+├── docs/                            # Documentação
+│   ├── README.md                   # Índice documentação
+│   ├── ARQUITETURA.md              # Arquitetura detalhada
+│   ├── DIAGRAMAS.md                # Diagramas Mermaid
+│   ├── COMPONENTES.md              # Doc componentes
+│   └── TESTING.md                  # Doc testes
+│
+├── solutions/                       # Soluções exportadas
+├── reports/                         # Relatórios PDF
+│
+├── requirements.txt                 # Dependências produção
+├── requirements-dev.txt             # Dependências dev
+├── pytest.ini                       # Config pytest
+├── run_tests.py                     # Script auxiliar testes
+└── README.md                        # Este arquivo
 ```
 
 ---
 
-## 🧬 Algoritmos Genéticos
+## Algoritmos Genéticos
 
 O sistema utiliza **Algoritmos Genéticos** para encontrar soluções ótimas ou próximas do ótimo. Você pode customizar três componentes principais:
 
@@ -206,9 +245,9 @@ Após:   [A, D, C, B, E, F]
 ```
 
 **Quando usar:**
-- ✅ Exploração local eficiente
-- ✅ Bom para ajustes finos
-- ✅ Funciona bem com seleção por torneio
+- Exploração local eficiente
+- Bom para ajustes finos
+- Funciona bem com seleção por torneio
 
 **Parâmetros:**
 - Taxa de mutação: 0.4 (40% de chance por gene)
@@ -230,9 +269,9 @@ Após:   [A, B, E, D, C, F]
 ```
 
 **Quando usar:**
-- ✅ Ótimo para TSP
-- ✅ Resolve cruzamentos de rotas
-- ✅ Mantém adjacências locais
+- Ótimo para TSP
+- Resolve cruzamentos de rotas
+- Mantém adjacências locais
 
 **Vantagens:**
 - Pode desfazer "nós" na rota
@@ -256,13 +295,13 @@ Após:   [A, B, D, E, C, F]
 ```
 
 **Quando usar:**
-- ✅ Alta exploração
-- ✅ Escapar de mínimos locais
-- ✅ Problemas muito complexos
+- Alta exploração
+- Escapar de mínimos locais
+- Problemas muito complexos
 
 **Atenção:**
-- ⚠️ Pode destruir boas soluções
-- ⚠️ Use taxa de mutação menor (0.2-0.3)
+- Pode destruir boas soluções
+- Use taxa de mutação menor (0.2-0.3)
 
 ---
 
@@ -289,15 +328,15 @@ Pais selecionados: D e B
 ```
 
 **Vantagens:**
-- ✅ **Simples e eficiente**
-- ✅ Não precisa ordenar toda população
-- ✅ Pressão seletiva ajustável (via K)
-- ✅ Funciona bem com qualquer função fitness
+- **Simples e eficiente**
+- Não precisa ordenar toda população
+- Pressão seletiva ajustável (via K)
+- Funciona bem com qualquer função fitness
 
 **Quando usar:**
-- ✅ **Recomendado para iniciantes**
-- ✅ Problemas de médio porte
-- ✅ Boa diversidade + elitismo
+- **Recomendado para iniciantes**
+- Problemas de médio porte
+- Boa diversidade + elitismo
 
 **Parâmetros:**
 - K (tamanho do torneio): 3
@@ -331,18 +370,18 @@ D: 30/90 = 33%
 ```
 
 **Vantagens:**
-- ✅ Seleção proporcional ao fitness
-- ✅ Todos têm chance (diversidade)
-- ✅ Intuitivo de entender
+- Seleção proporcional ao fitness
+- Todos têm chance (diversidade)
+- Intuitivo de entender
 
 **Desvantagens:**
-- ⚠️ Pode convergir rápido se houver um super-indivíduo
-- ⚠️ Sensível à escala do fitness
+- Pode convergir rápido se houver um super-indivíduo
+- Sensível à escala do fitness
 
 **Quando usar:**
-- ✅ Fitness bem distribuído
-- ✅ Quer diversidade alta
-- ✅ População grande (100+)
+- Fitness bem distribuído
+- Quer diversidade alta
+- População grande (100+)
 
 ---
 
@@ -369,14 +408,14 @@ Rank 4: 1/10 = 10%
 ```
 
 **Vantagens:**
-- ✅ **Não sofre com diferenças extremas de fitness**
-- ✅ Pressão seletiva constante
-- ✅ Evita convergência prematura
+- **Não sofre com diferenças extremas de fitness**
+- Pressão seletiva constante
+- Evita convergência prematura
 
 **Quando usar:**
-- ✅ Fitness com valores muito diferentes
-- ✅ Problemas com platôs
-- ✅ Quer controle fino da pressão seletiva
+- Fitness com valores muito diferentes
+- Problemas com platôs
+- Quer controle fino da pressão seletiva
 
 **Melhor para:**
 - VRP com muitas restrições
@@ -409,15 +448,15 @@ Filho:  [G, B, C, D, E, F, A, H]
 ```
 
 **Vantagens:**
-- ✅ **Preserva ordem relativa**
-- ✅ Sempre gera soluções válidas
-- ✅ Melhor para TSP
-- ✅ Mantém "vizinhanças" boas
+- **Preserva ordem relativa**
+- Sempre gera soluções válidas
+- Melhor para TSP
+- Mantém "vizinhanças" boas
 
 **Quando usar:**
-- ✅ **Primeira escolha para TSP**
-- ✅ Prioridades importam
-- ✅ Sequência é crítica
+- **Primeira escolha para TSP**
+- Prioridades importam
+- Sequência é crítica
 
 ---
 
@@ -446,14 +485,14 @@ Filho: [F, G, C, D, E, B, A, H]
 ```
 
 **Vantagens:**
-- ✅ Preserva relações entre genes
-- ✅ Bom para estruturas complexas
-- ✅ Menos disruptivo que OX
+- Preserva relações entre genes
+- Bom para estruturas complexas
+- Menos disruptivo que OX
 
 **Quando usar:**
-- ✅ VRP com múltiplas rotas
-- ✅ Relações entre cidades importam
-- ✅ Estrutura hierárquica
+- VRP com múltiplas rotas
+- Relações entre cidades importam
+- Estrutura hierárquica
 
 ---
 
@@ -479,18 +518,18 @@ Filho: [A, G, B, D, E, F, C, H]
 ```
 
 **Vantagens:**
-- ✅ Cada gene vem de um pai específico
-- ✅ Preserva posições absolutas
-- ✅ Único em sua abordagem
+- Cada gene vem de um pai específico
+- Preserva posições absolutas
+- Único em sua abordagem
 
 **Quando usar:**
-- ✅ Posição absoluta importa
-- ✅ Problemas com restrições de ordem
-- ✅ Estruturas circulares
+- Posição absoluta importa
+- Problemas com restrições de ordem
+- Estruturas circulares
 
 ---
 
-### 🎯 Recomendações de Combinações
+### Recomendações de Combinações
 
 | Problema | Mutação | Seleção | Crossover | Por quê |
 |----------|---------|---------|-----------|---------|
@@ -502,17 +541,17 @@ Filho: [A, G, B, D, E, F, C, H]
 
 ---
 
-## 🗺️ Modos de Operação
+## Modos de Operação
 
 ### TSP - Problema do Caixeiro Viajante
 
 **Objetivo:** Encontrar a menor rota que visita todas as cidades exatamente uma vez.
 
 **Características:**
-- ✅ Um único veículo
-- ✅ Uma única rota
-- ✅ Todas as cidades devem ser visitadas
-- ✅ Prioridades influenciam a ordem
+- Um único veículo
+- Uma única rota
+- Todas as cidades devem ser visitadas
+- Prioridades influenciam a ordem
 
 **Restrições:**
 - Peso total ≤ Capacidade do veículo
@@ -527,10 +566,10 @@ fitness = distância_total
 ```
 
 **Quando usar TSP:**
-- ✅ Um único veículo disponível
-- ✅ Rota pequena/média (até 15 cidades)
-- ✅ Foco em ordem de visita
-- ✅ Aprendizado do algoritmo
+- Um único veículo disponível
+- Rota pequena/média (até 15 cidades)
+- Foco em ordem de visita
+- Aprendizado do algoritmo
 
 **Exemplo de Solução TSP:**
 ```
@@ -553,10 +592,10 @@ Prioridades: 3x P0, 5x P1, 4x P2
 **Objetivo:** Distribuir as cidades entre múltiplos veículos minimizando custo total.
 
 **Características:**
-- ✅ Múltiplos veículos
-- ✅ Múltiplas rotas simultâneas
-- ✅ Cada cidade visitada uma vez
-- ✅ Depósito central (opcional)
+- Múltiplos veículos
+- Múltiplas rotas simultâneas
+- Cada cidade visitada uma vez
+- Depósito central (opcional)
 
 **Restrições:**
 - Cada rota: peso ≤ capacidade do veículo
@@ -574,10 +613,10 @@ fitness = Σ(custo_rota_i)
 ```
 
 **Quando usar VRP:**
-- ✅ Muitas cidades (10+)
-- ✅ Múltiplos veículos disponíveis
-- ✅ Necessidade de otimizar frota
-- ✅ Problema real de logística
+- Muitas cidades (10+)
+- Múltiplos veículos disponíveis
+- Necessidade de otimizar frota
+- Problema real de logística
 
 **Exemplo de Solução VRP:**
 ```
@@ -600,12 +639,12 @@ Rota 3 (Caminhão Grande - 5000kg, 800km):
 
 Custo Total: R$ 3.723
 Veículos: 3
-Todas rotas viáveis: ✅
+Todas rotas viáveis: Sim
 ```
 
 ---
 
-## 🤖 Análise com IA
+## Análise com IA
 
 O sistema inclui análise avançada usando **Google Gemini AI** com embeddings.
 
@@ -668,7 +707,7 @@ python route_analyzer.py
 
 ---
 
-## 🎮 Controles e Interface
+## Controles e Interface
 
 ### Controles Durante Execução
 
@@ -722,7 +761,7 @@ python route_analyzer.py
 
 ---
 
-## 💡 Exemplos de Uso
+## Exemplos de Uso
 
 ### Exemplo 1: TSP Básico
 
@@ -808,7 +847,7 @@ python tsp.py → N → Scramble, Roulette, OX → TSP
 
 ---
 
-## 📊 Arquivos de Dados
+## Arquivos de Dados
 
 ### Estrutura dos CSVs
 
@@ -869,7 +908,76 @@ Para usar seus próprios dados:
 
 ---
 
-## 🛠️ Troubleshooting
+## Testes Automatizados
+
+O projeto inclui uma suíte completa de testes automatizados para garantir a qualidade do código.
+
+### Executar Testes
+
+```bash
+# Executar todos os testes
+pytest
+
+# Executar com relatório de cobertura
+pytest --cov=. --cov-report=html
+
+# Script auxiliar interativo
+python run_tests.py
+```
+
+### Cobertura de Testes
+
+**42 testes** cobrindo:
+- Carregamento e validação de dados (9 testes)
+- Operadores do algoritmo genético (10 testes)
+- Validação de restrições (9 testes)
+- Função fitness TSP e VRP (incluído)
+- Exportação de soluções para JSON (6 testes)
+- Solver VRP e suas restrições (8 testes)
+
+**Status**: 100% dos testes passando | Tempo: ~0.33s
+
+Documentação completa: [docs/TESTING.md](docs/TESTING.md)
+
+---
+
+## Documentação
+
+O projeto possui documentação completa e detalhada:
+
+### Documentos Principais
+
+1. **[docs/ARQUITETURA.md](docs/ARQUITETURA.md)**
+   - Arquitetura do sistema (4 camadas)
+   - Componentes e responsabilidades
+   - Fluxos de dados (TSP, VRP, IA)
+   - Padrões de projeto
+   - Decisões arquiteturais
+
+2. **[docs/DIAGRAMAS.md](docs/DIAGRAMAS.md)**
+   - 10 diagramas Mermaid
+   - Fluxogramas completos
+   - Diagramas de sequência
+   - Estruturas de dados
+   - Pipelines de otimização
+
+3. **[docs/COMPONENTES.md](docs/COMPONENTES.md)**
+   - Documentação detalhada de cada módulo
+   - Assinaturas de funções
+   - Estruturas de dados
+   - Dependências entre componentes
+
+4. **[docs/TESTING.md](docs/TESTING.md)**
+   - Guia completo de testes
+   - Fixtures e exemplos
+   - Boas práticas
+   - Troubleshooting
+
+**Ver índice completo**: [docs/README.md](docs/README.md)
+
+---
+
+## Troubleshooting
 
 ### Problema: "Module 'pygame' not found"
 
@@ -946,7 +1054,7 @@ MUTATION_RATE = 0.3    # Ajustar
 
 ---
 
-## 📈 Parâmetros de Configuração
+## Parâmetros de Configuração
 
 ### `config.py`
 
@@ -991,7 +1099,7 @@ MUTATION_RATE = 0.5
 
 ---
 
-## 🤝 Contribuindo
+## Contribuindo
 
 Contribuições são bem-vindas! Para contribuir:
 
@@ -1003,13 +1111,13 @@ Contribuições são bem-vindas! Para contribuir:
 
 ---
 
-## 👥 Autores
+## Autores
 
 - Desenvolvido como projeto acadêmico FIAP - Em desenvolvimento para estudos
 
 ---
 
-## 🙏 Agradecimentos
+## Agradecimentos
 
 - Dados de cidades: IBGE e GeoJSON
 - Visualizações: Pygame e Matplotlib
