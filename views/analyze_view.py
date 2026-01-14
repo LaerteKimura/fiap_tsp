@@ -20,6 +20,13 @@ except ImportError:
 SOLUTIONS_DIR = "solutions"
 REPORTS_DIR = "reports"
 
+def _get_font(size: int, bold: bool = False):
+    for name in ["Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI"]:
+        f = pygame.font.SysFont(name, size, bold=bold)
+        if f:
+            return f
+    return pygame.font.Font(None, size)
+
 
 def _open_pdf(pdf_path: str):
     """Abre o PDF no visualizador padrão do sistema."""
@@ -43,183 +50,225 @@ def _open_pdf(pdf_path: str):
 
 
 def show_api_key_input(screen: pygame.Surface, clock: pygame.time.Clock) -> Optional[str]:
-    """Solicita chave API do Gemini em tela."""
     WIDTH, HEIGHT = screen.get_size()
-    
-    font_title = pygame.font.SysFont("Segoe UI", 28, bold=True)
-    font_label = pygame.font.SysFont("Segoe UI", 16)
-    font_input = pygame.font.SysFont("Segoe UI", 18)
-    font_hint = pygame.font.SysFont("Segoe UI", 14)
-    
+
+    # Fontes no padrão
+    font_title = _get_font(28, bold=True)
+    font_sub   = _get_font(16)
+    font_label = _get_font(16, bold=True)
+    font_input = _get_font(18)
+    font_btn   = _get_font(16, bold=True)
+    font_hint  = _get_font(14)
+
+    # Logo (mesmo padrão das outras telas)
+    base_dir = os.path.dirname(__file__)
+    logo_path = os.path.join(base_dir, "..", "assets", "location_pin.png")
+    logo = pygame.image.load(logo_path).convert_alpha()
+    logo = pygame.transform.smoothscale(logo, (40, 40))
+
     api_key = ""
     active = True
     cursor_visible = True
     cursor_timer = 0
-    
-    # Inicializar scrap (clipboard) do pygame
+
+    # Clipboard
     try:
         pygame.scrap.init()
         pygame.scrap.set_mode(pygame.SCRAP_TEXT)
     except:
-        pass  # Scrap pode não estar disponível em todos os sistemas
-    
+        pass
+
+    def get_clipboard_text() -> Optional[str]:
+        text = None
+        try:
+            scrap_text = pygame.scrap.get(pygame.SCRAP_TEXT)
+            if scrap_text:
+                text = scrap_text.decode("utf-8", errors="ignore").strip()
+        except:
+            pass
+
+        if not text:
+            try:
+                import pyperclip  # type: ignore
+                text = (pyperclip.paste() or "").strip()
+            except:
+                pass
+
+        if text:
+            text = "".join(c for c in text if c.isprintable() or c in " \t")
+            return text
+        return None
+
     while True:
+        # Layout do card (calcula ANTES de tratar eventos pra não usar variável não definida)
+        card_w = int(WIDTH * 0.85)
+        card_h = 340
+        card_x = (WIDTH - card_w) // 2
+        card_y = (HEIGHT - card_h) // 2
+
+        input_rect = pygame.Rect(card_x + 40, card_y + 150, card_w - 80, 50)
+
+        buttons_y = card_y + card_h - 78
+        back_rect = pygame.Rect(card_x + 40, buttons_y, 170, 46)
+        continue_rect = pygame.Rect(card_x + card_w - 230, buttons_y, 190, 46)
+
         for event in pygame.event.get():
             if event.type == QUIT:
-                return None
-            
+                pygame.quit()
+                raise SystemExit
+
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
                     return None
-                elif event.key == K_BACKSPACE:
+
+                # Ctrl+V
+                if (pygame.key.get_mods() & KMOD_CTRL) and event.key in (ord("v"), ord("V")):
+                    if active:
+                        clip = get_clipboard_text()
+                        if clip:
+                            api_key = clip
+                    continue
+
+                if event.key == K_BACKSPACE:
                     if active:
                         api_key = api_key[:-1]
+
                 elif event.key in (K_RETURN, K_KP_ENTER):
                     if api_key.strip():
                         return api_key.strip()
+
                 elif event.key == K_TAB:
                     continue
-                elif event.key == ord('v') and (pygame.key.get_mods() & KMOD_CTRL):
-                    # Ctrl+V para colar
-                    if active:
-                        clipboard_text = None
-                        # Tentar usar pygame.scrap primeiro
-                        try:
-                            scrap_text = pygame.scrap.get(pygame.SCRAP_TEXT)
-                            if scrap_text:
-                                clipboard_text = scrap_text.decode('utf-8', errors='ignore').strip()
-                        except:
-                            pass
-                        
-                        # Fallback: tentar usar pyperclip se disponível
-                        if not clipboard_text:
-                            try:
-                                import pyperclip  # type: ignore
-                                clipboard_text = pyperclip.paste()
-                                if clipboard_text:
-                                    clipboard_text = clipboard_text.strip()
-                            except ImportError:
-                                pass
-                        
-                        if clipboard_text:
-                            # Remove caracteres de controle, mantém apenas caracteres imprimíveis e espaços
-                            clipboard_text = ''.join(c for c in clipboard_text if c.isprintable() or c == ' ')
-                            api_key = clipboard_text
+
                 else:
                     if event.unicode and active:
                         api_key += event.unicode
-            
+
             if event.type == MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
-                input_rect = pygame.Rect(card_x + 30, card_y + 120, card_w - 60, 50)
-                continue_rect = pygame.Rect(card_x + card_w - 200, card_y + card_h - 70, 170, 46)
-                back_rect = pygame.Rect(card_x + 30, card_y + card_h - 70, 170, 46)
-                
+
                 if input_rect.collidepoint(mx, my):
                     active = True
+
+                elif back_rect.collidepoint(mx, my):
+                    return None
+
                 elif continue_rect.collidepoint(mx, my):
                     if api_key.strip():
                         return api_key.strip()
-                elif back_rect.collidepoint(mx, my):
-                    return None
-        
-        # Toggle cursor
+
+        # Cursor blink
         cursor_timer += clock.get_time()
         if cursor_timer > 500:
             cursor_visible = not cursor_visible
             cursor_timer = 0
-        
+
         # Render
         screen.fill((245, 247, 250))
-        
-        # Card
-        card_w = 700
-        card_h = 300
-        card_x = (WIDTH - card_w) // 2
-        card_y = (HEIGHT - card_h) // 2
-        
-        pygame.draw.rect(screen, (210, 215, 220), (card_x + 4, card_y + 4, card_w, card_h), border_radius=16)
-        pygame.draw.rect(screen, WHITE, (card_x, card_y, card_w, card_h), border_radius=16)
-        pygame.draw.rect(screen, (200, 205, 210), (card_x, card_y, card_w, card_h), width=1, border_radius=16)
-        
-        # Título
+
+        pygame.draw.rect(screen, (210, 215, 220), (card_x + 5, card_y + 5, card_w, card_h), border_radius=18)
+        pygame.draw.rect(screen, WHITE, (card_x, card_y, card_w, card_h), border_radius=18)
+        pygame.draw.rect(screen, (200, 205, 210), (card_x, card_y, card_w, card_h), width=1, border_radius=18)
+
+        # Topo: logo + título
+        logo_x = card_x + 40
+        logo_y = card_y + 32
+        screen.blit(logo, (logo_x, logo_y))
+
         title = font_title.render("Chave API do Gemini", True, (40, 45, 55))
-        screen.blit(title, (card_x + 30, card_y + 30))
-        
-        # Label
-        label = font_label.render("Digite sua chave API do Gemini:", True, (90, 95, 105))
-        screen.blit(label, (card_x + 30, card_y + 90))
-        
+        title_rect = title.get_rect(midleft=(logo_x + 60, logo_y + logo.get_height() // 2))
+        screen.blit(title, title_rect)
+
+        sub = font_sub.render("Cole sua chave para habilitar o chat e os relatórios via LLM", True, (90, 95, 105))
+        screen.blit(sub, (card_x + 40, card_y + 92))
+
+        # Label do input
+        label = font_label.render("Chave API:", True, (60, 65, 75))
+        screen.blit(label, (card_x + 40, card_y + 125))
+
         # Input
-        input_rect = pygame.Rect(card_x + 30, card_y + 120, card_w - 60, 50)
         border_color = (30, 90, 160) if active else (200, 205, 210)
-        pygame.draw.rect(screen, GRAY, input_rect, border_radius=8)
-        pygame.draw.rect(screen, border_color, input_rect, width=2, border_radius=8)
-        
-        # Texto do input (mascarado)
+        pygame.draw.rect(screen, GRAY, input_rect, border_radius=10)
+        pygame.draw.rect(screen, border_color, input_rect, width=2, border_radius=10)
+
         display_text = "*" * len(api_key) if api_key else ""
         input_surface = font_input.render(display_text, True, BLACK)
-        screen.blit(input_surface, (input_rect.x + 10, input_rect.centery - input_surface.get_height() // 2))
-        
-        # Cursor
+        screen.blit(input_surface, (input_rect.x + 12, input_rect.centery - input_surface.get_height() // 2))
+
         if active and cursor_visible:
-            cursor_x = input_rect.x + 10 + input_surface.get_width()
-            pygame.draw.line(screen, BLACK, (cursor_x, input_rect.y + 10), (cursor_x, input_rect.y + 40), 2)
-        
-        # Botões
-        continue_rect = pygame.Rect(card_x + card_w - 200, card_y + card_h - 70, 170, 46)
-        back_rect = pygame.Rect(card_x + 30, card_y + card_h - 70, 170, 46)
-        
+            cursor_x = input_rect.x + 12 + input_surface.get_width()
+            pygame.draw.line(screen, BLACK, (cursor_x, input_rect.y + 12), (cursor_x, input_rect.y + input_rect.height - 12), 2)
+
         mx, my = pygame.mouse.get_pos()
-        
-        # Botão Continuar
-        continue_hover = continue_rect.collidepoint(mx, my)
-        continue_bg = (220, 235, 250) if continue_hover else (245, 247, 250)
-        pygame.draw.rect(screen, continue_bg, continue_rect, border_radius=12)
-        pygame.draw.rect(screen, (30, 90, 160), continue_rect, width=1, border_radius=12)
-        continue_txt = font_label.render("Continuar >", True, (30, 90, 160))
-        screen.blit(continue_txt, continue_txt.get_rect(center=continue_rect.center))
-        
+
         # Botão Voltar
         back_hover = back_rect.collidepoint(mx, my)
         back_bg = (235, 240, 246) if back_hover else (245, 247, 250)
         pygame.draw.rect(screen, back_bg, back_rect, border_radius=12)
         pygame.draw.rect(screen, (200, 205, 210), back_rect, width=1, border_radius=12)
-        back_txt = font_label.render("< Voltar", True, (70, 75, 85))
+        back_txt = font_btn.render("< Voltar", True, (70, 75, 85))
         screen.blit(back_txt, back_txt.get_rect(center=back_rect.center))
-        
+
+        # Botão Continuar
+        cont_hover = continue_rect.collidepoint(mx, my)
+        cont_bg = (220, 235, 250) if cont_hover else (245, 247, 250)
+        pygame.draw.rect(screen, cont_bg, continue_rect, border_radius=12)
+        pygame.draw.rect(screen, (30, 90, 160), continue_rect, width=1, border_radius=12)
+        cont_txt = font_btn.render("Continuar >", True, (30, 90, 160))
+        screen.blit(cont_txt, cont_txt.get_rect(center=continue_rect.center))
+
         # Hint
-        hint = font_hint.render("Digite a chave e pressione Enter ou clique em Continuar", True, (120, 125, 135))
-        screen.blit(hint, (card_x + 30, card_y + card_h - 25))
-        
+        hint = font_hint.render("Enter confirmar • Esc voltar • Ctrl+V colar", True, (120, 125, 135))
+        screen.blit(hint, (card_x + 40, buttons_y + 54))
+
         pygame.display.flip()
         clock.tick(60)
 
-
 def show_file_selection(screen: pygame.Surface, clock: pygame.time.Clock, json_files: list) -> Optional[str]:
-    """Mostra lista de arquivos JSON para seleção em tela."""
     WIDTH, HEIGHT = screen.get_size()
-    
-    font_title = pygame.font.SysFont("Segoe UI", 28, bold=True)
-    font_item = pygame.font.SysFont("Segoe UI", 16)
-    font_hint = pygame.font.SysFont("Segoe UI", 14)
-    
+
+    font_title = _get_font(28, bold=True)
+    font_sub   = _get_font(16)
+    font_item  = _get_font(16)
+    font_btn   = _get_font(16, bold=True)
+    font_hint  = _get_font(14)
+
+    # Logo padrão
+    base_dir = os.path.dirname(__file__)
+    logo_path = os.path.join(base_dir, "..", "assets", "location_pin.png")
+    logo = pygame.image.load(logo_path).convert_alpha()
+    logo = pygame.transform.smoothscale(logo, (40, 40))
+
     selected = 0
     scroll_offset = 0
     items_per_page = 8
-    
-    # Definir dimensões do card (usadas em eventos e render)
-    card_w = 800
-    card_h = 500
-    
+
+    # Card fixo (padrão analyze)
+    card_w = 820
+    card_h = 520
+
+    item_h = 46
+    item_gap = 10
+
     while True:
         card_x = (WIDTH - card_w) // 2
         card_y = (HEIGHT - card_h) // 2
-        
+
+        # Áreas
+        list_y = card_y + 140
+        list_h = card_h - 220
+        list_rect = pygame.Rect(card_x + 40, list_y, card_w - 80, list_h)
+
+        # Botões
+        buttons_y = card_y + card_h - 78
+        back_rect = pygame.Rect(card_x + 40, buttons_y, 170, 46)
+        continue_rect = pygame.Rect(card_x + card_w - 230, buttons_y, 190, 46)
+
         for event in pygame.event.get():
             if event.type == QUIT:
-                return None
-            
+                pygame.quit()
+                raise SystemExit
+
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
                     return None
@@ -229,101 +278,234 @@ def show_file_selection(screen: pygame.Surface, clock: pygame.time.Clock, json_f
                     selected = min(len(json_files) - 1, selected + 1)
                 elif event.key in (K_RETURN, K_KP_ENTER):
                     return json_files[selected]
-            
+
             if event.type == pygame.MOUSEWHEEL:
-                scroll_offset = max(0, min(scroll_offset - event.y * 20, 
-                                         max(0, len(json_files) - items_per_page) * 50))
-            
+                # scroll suave
+                scroll_offset = max(
+                    0,
+                    min(
+                        scroll_offset - event.y * 20,
+                        max(0, len(json_files) - items_per_page) * (item_h + item_gap),
+                    ),
+                )
+
             if event.type == MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
-                
-                # Verificar se clicou em um item da lista
-                list_y = card_y + 90
-                list_h = card_h - 180
-                item_height = 50
-                
+
+                # Clique em item da lista
+                item_total_h = item_h + item_gap
                 for i in range(len(json_files)):
-                    item_y = list_y + i * item_height - scroll_offset
+                    item_y = list_y + i * item_total_h - scroll_offset
                     if item_y < list_y or item_y > list_y + list_h:
                         continue
-                    
-                    item_rect = pygame.Rect(card_x + 30, item_y, card_w - 60, item_height - 5)
+
+                    item_rect = pygame.Rect(card_x + 40, item_y, card_w - 80, item_h)
                     if item_rect.collidepoint(mx, my):
-                        # Clicou diretamente no arquivo - selecionar e avançar
                         return json_files[i]
-                
-                # Verificar botões
-                continue_rect = pygame.Rect(card_x + card_w - 200, card_y + card_h - 70, 170, 46)
-                back_rect = pygame.Rect(card_x + 30, card_y + card_h - 70, 170, 46)
-                
+
+                # Botões
+                if back_rect.collidepoint(mx, my):
+                    return None
                 if continue_rect.collidepoint(mx, my):
                     return json_files[selected]
-                elif back_rect.collidepoint(mx, my):
-                    return None
-        
+
+        # Ajustar scroll baseado na seleção (sempre mantém selecionado visível)
+        item_total_h = item_h + item_gap
+        visible_start = scroll_offset // item_total_h
+        if selected < visible_start:
+            scroll_offset = selected * item_total_h
+        elif selected >= visible_start + items_per_page:
+            scroll_offset = (selected - items_per_page + 1) * item_total_h
+
         # Render
         screen.fill((245, 247, 250))
-        
-        # Card (dimensões já definidas no início do loop)
-        
+
+        # Card
+        pygame.draw.rect(screen, (210, 215, 220), (card_x + 5, card_y + 5, card_w, card_h), border_radius=18)
+        pygame.draw.rect(screen, WHITE, (card_x, card_y, card_w, card_h), border_radius=18)
+        pygame.draw.rect(screen, (200, 205, 210), (card_x, card_y, card_w, card_h), width=1, border_radius=18)
+
+        # Topo: logo + título
+        logo_x = card_x + 40
+        logo_y = card_y + 32
+        screen.blit(logo, (logo_x, logo_y))
+
+        title = font_title.render("Selecionar Arquivo de Solução", True, (40, 45, 55))
+        title_rect = title.get_rect(midleft=(logo_x + 60, logo_y + logo.get_height() // 2))
+        screen.blit(title, title_rect)
+
+        sub = font_sub.render("Escolha o JSON exportado para análise", True, (90, 95, 105))
+        screen.blit(sub, (card_x + 40, card_y + 92))
+
+        # Lista
+        mx, my = pygame.mouse.get_pos()
+
+        for i in range(len(json_files)):
+            item_y = list_y + i * item_total_h - scroll_offset
+            if item_y < list_y or item_y > list_y + list_h:
+                continue
+
+            item_rect = pygame.Rect(card_x + 40, item_y, card_w - 80, item_h)
+            is_hover = item_rect.collidepoint(mx, my)
+            if is_hover:
+                selected = i
+
+            is_selected = (i == selected)
+
+            bg = (220, 235, 250) if is_selected else ((235, 240, 246) if is_hover else WHITE)
+            pygame.draw.rect(screen, bg, item_rect, border_radius=10)
+
+            if is_selected:
+                pygame.draw.rect(screen, (30, 90, 160), item_rect, width=2, border_radius=10)
+            else:
+                pygame.draw.rect(screen, (200, 205, 210), item_rect, width=1, border_radius=10)
+
+            file_name = os.path.basename(json_files[i])
+            file_text = font_item.render(file_name, True, (40, 45, 55) if is_selected else (70, 75, 85))
+            screen.blit(file_text, (item_rect.x + 14, item_rect.centery - file_text.get_height() // 2))
+
+        # Botões
+        back_hover = back_rect.collidepoint(mx, my)
+        back_bg = (235, 240, 246) if back_hover else (245, 247, 250)
+        pygame.draw.rect(screen, back_bg, back_rect, border_radius=12)
+        pygame.draw.rect(screen, (200, 205, 210), back_rect, width=1, border_radius=12)
+        back_txt = font_btn.render("< Voltar", True, (70, 75, 85))
+        screen.blit(back_txt, back_txt.get_rect(center=back_rect.center))
+
+        cont_hover = continue_rect.collidepoint(mx, my)
+        cont_bg = (220, 235, 250) if cont_hover else (245, 247, 250)
+        pygame.draw.rect(screen, cont_bg, continue_rect, border_radius=12)
+        pygame.draw.rect(screen, (30, 90, 160), continue_rect, width=1, border_radius=12)
+        cont_txt = font_btn.render("Continuar >", True, (30, 90, 160))
+        screen.blit(cont_txt, cont_txt.get_rect(center=continue_rect.center))
+
+        pygame.display.flip()
+        clock.tick(60)
+
+def show_analysis_choice(screen: pygame.Surface, clock: pygame.time.Clock) -> Optional[str]:
+    """Permite escolher entre gerar relatório ou iniciar chat."""
+    WIDTH, HEIGHT = screen.get_size()
+
+    # Fonts (padrão visual)
+    font_title = _get_font(34, bold=True)
+    font_sub   = _get_font(16)
+
+    # Esses dois precisam suportar emoji
+    font_item  = _get_font(18, bold=True)
+    font_hint  = _get_font(14)
+
+    # Logo (mesmo padrão das outras telas)
+    base_dir = os.path.dirname(__file__)
+    logo_path = os.path.join(base_dir, "..", "assets", "location_pin.png")
+    logo = pygame.image.load(logo_path).convert_alpha()
+    logo = pygame.transform.smoothscale(logo, (36, 36))
+
+    selected = 0  # 0 = report, 1 = chat
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                raise SystemExit
+
+            if event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    return None
+                if event.key == pygame.K_UP:
+                    selected = 0
+                if event.key == pygame.K_DOWN:
+                    selected = 1
+                if event.key in (K_RETURN, K_KP_ENTER):
+                    return "report" if selected == 0 else "chat"
+
+            if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                mx, my = event.pos
+                if report_rect.collidepoint(mx, my):
+                    return "report"
+                if chat_rect.collidepoint(mx, my):
+                    return "chat"
+                if back_rect.collidepoint(mx, my):
+                    return None
+                if continue_rect.collidepoint(mx, my):
+                    return "report" if selected == 0 else "chat"
+
+        # Render
+        screen.fill((245, 247, 250))
+
+        # Card
+        card_w = int(WIDTH * 0.78)
+        card_h = int(HEIGHT * 0.78)
+        card_x = (WIDTH - card_w) // 2
+        card_y = (HEIGHT - card_h) // 2
+
         pygame.draw.rect(screen, (210, 215, 220), (card_x + 4, card_y + 4, card_w, card_h), border_radius=16)
         pygame.draw.rect(screen, WHITE, (card_x, card_y, card_w, card_h), border_radius=16)
         pygame.draw.rect(screen, (200, 205, 210), (card_x, card_y, card_w, card_h), width=1, border_radius=16)
-        
-        # Título
-        title = font_title.render("Selecionar Arquivo de Solução", True, (40, 45, 55))
-        screen.blit(title, (card_x + 30, card_y + 30))
-        
-        # Lista de arquivos
-        list_y = card_y + 90
-        list_h = card_h - 180
-        list_rect = pygame.Rect(card_x + 30, list_y, card_w - 60, list_h)
-        
-        # Ajustar scroll baseado na seleção
-        item_height = 50
-        visible_start = scroll_offset // item_height
-        if selected < visible_start:
-            scroll_offset = selected * item_height
-        elif selected >= visible_start + items_per_page:
-            scroll_offset = (selected - items_per_page + 1) * item_height
-        
+
+        # Topo: logo + título + subtítulo
+        logo_x = card_x + 30
+        logo_y = card_y + 28
+        screen.blit(logo, (logo_x, logo_y))
+
+        title = font_title.render("Modo de análise", True, (40, 45, 55))
+        title_rect = title.get_rect(midleft=(logo_x + 54, logo_y + logo.get_height() // 2))
+        screen.blit(title, title_rect)
+
+        sub = font_sub.render("Escolha como você quer explorar a solução", True, (90, 95, 105))
+        screen.blit(sub, (card_x + 30, card_y + 78))
+
         mx, my = pygame.mouse.get_pos()
-        
-        for i in range(len(json_files)):
-            item_y = list_y + i * item_height - scroll_offset
-            
-            if item_y < list_y or item_y > list_y + list_h:
-                continue
-            
-            item_rect = pygame.Rect(card_x + 30, item_y, card_w - 60, item_height - 5)
-            is_selected = (i == selected)
-            is_hover = item_rect.collidepoint(mx, my)
-            
-            if is_hover:
-                selected = i
-            
-            bg_color = (220, 235, 250) if is_selected else ((235, 240, 246) if is_hover else WHITE)
-            pygame.draw.rect(screen, bg_color, item_rect, border_radius=8)
-            
-            if is_selected:
-                pygame.draw.rect(screen, (30, 90, 160), item_rect, width=2, border_radius=8)
-            
-            # Nome do arquivo
-            file_text = font_item.render(json_files[i], True, (40, 45, 55) if is_selected else (70, 75, 85))
-            screen.blit(file_text, (item_rect.x + 15, item_rect.centery - file_text.get_height() // 2))
-        
-        # Botões
-        continue_rect = pygame.Rect(card_x + card_w - 200, card_y + card_h - 70, 170, 46)
-        back_rect = pygame.Rect(card_x + 30, card_y + card_h - 70, 170, 46)
-        
-        # Botão Continuar
-        continue_hover = continue_rect.collidepoint(mx, my)
-        continue_bg = (220, 235, 250) if continue_hover else (245, 247, 250)
-        pygame.draw.rect(screen, continue_bg, continue_rect, border_radius=12)
-        pygame.draw.rect(screen, (30, 90, 160), continue_rect, width=1, border_radius=12)
-        continue_txt = font_item.render("Continuar >", True, (30, 90, 160))
-        screen.blit(continue_txt, continue_txt.get_rect(center=continue_rect.center))
-        
+
+        # Opções (bloco central)
+        option_w = card_w - 60
+        option_h = 84
+        option_gap = 16
+        options_top = card_y + 130
+
+        report_rect = pygame.Rect(card_x + 30, options_top, option_w, option_h)
+        chat_rect   = pygame.Rect(card_x + 30, options_top + option_h + option_gap, option_w, option_h)
+
+        # Hover seleciona
+        if report_rect.collidepoint(mx, my):
+            selected = 0
+        if chat_rect.collidepoint(mx, my):
+            selected = 1
+
+        def draw_option(rect, is_selected, is_hover, title_text, desc_text):
+            bg = (220, 235, 250) if is_selected else ((235, 240, 246) if is_hover else WHITE)
+            border = (30, 90, 160) if is_selected else (200, 205, 210)
+            border_w = 2 if is_selected else 1
+
+            pygame.draw.rect(screen, bg, rect, border_radius=12)
+            pygame.draw.rect(screen, border, rect, width=border_w, border_radius=12)
+
+            t = font_item.render(title_text, True, (40, 45, 55))
+            d = font_hint.render(desc_text, True, (120, 125, 135))
+            screen.blit(t, (rect.x + 18, rect.y + 18))
+            screen.blit(d, (rect.x + 18, rect.y + 48))
+
+        # ÍCONES DE VOLTA 😄
+        draw_option(
+            report_rect,
+            is_selected=(selected == 0),
+            is_hover=report_rect.collidepoint(mx, my),
+            title_text="📄  Gerar relatório PDF",
+            desc_text="Análise completa com visualizações"
+        )
+
+        draw_option(
+            chat_rect,
+            is_selected=(selected == 1),
+            is_hover=chat_rect.collidepoint(mx, my),
+            title_text="💬  Iniciar chat com LLM",
+            desc_text="Diálogo interativo sobre a solução"
+        )
+
+        # Rodapé: botões (mesma linha) + hint embaixo (com folga)
+        buttons_y = card_y + card_h - 92
+        back_rect = pygame.Rect(card_x + 30, buttons_y, 170, 46)
+        continue_rect = pygame.Rect(card_x + card_w - 200, buttons_y, 170, 46)
+
         # Botão Voltar
         back_hover = back_rect.collidepoint(mx, my)
         back_bg = (235, 240, 246) if back_hover else (245, 247, 250)
@@ -331,130 +513,21 @@ def show_file_selection(screen: pygame.Surface, clock: pygame.time.Clock, json_f
         pygame.draw.rect(screen, (200, 205, 210), back_rect, width=1, border_radius=12)
         back_txt = font_item.render("< Voltar", True, (70, 75, 85))
         screen.blit(back_txt, back_txt.get_rect(center=back_rect.center))
-        
-        # Hint
+
+        # Botão Confirmar
+        cont_hover = continue_rect.collidepoint(mx, my)
+        cont_bg = (220, 235, 250) if cont_hover else (245, 247, 250)
+        pygame.draw.rect(screen, cont_bg, continue_rect, border_radius=12)
+        pygame.draw.rect(screen, (30, 90, 160), continue_rect, width=1, border_radius=12)
+        cont_txt = font_item.render("Confirmar >", True, (30, 90, 160))
+        screen.blit(cont_txt, cont_txt.get_rect(center=continue_rect.center))
+
+        # Hint (abaixo, não encostado)
         hint = font_hint.render("↑↓ ou mouse • Enter confirmar • Esc voltar", True, (120, 125, 135))
-        screen.blit(hint, (card_x + 30, card_y + card_h - 25))
-        
+        screen.blit(hint, (card_x + 30, buttons_y + 56))
+
         pygame.display.flip()
         clock.tick(60)
-
-
-def show_analysis_choice(screen: pygame.Surface, clock: pygame.time.Clock) -> Optional[str]:
-    """Permite escolher entre gerar relatório ou iniciar chat."""
-    WIDTH, HEIGHT = screen.get_size()
-    
-    font_title = pygame.font.SysFont("Segoe UI", 28, bold=True)
-    font_item = pygame.font.SysFont("Segoe UI", 18)
-    font_hint = pygame.font.SysFont("Segoe UI", 14)
-    
-    selected = 0  # 0 = Relatório, 1 = Chat
-    
-    while True:
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                return None
-            
-            if event.type == KEYDOWN:
-                if event.key == K_ESCAPE:
-                    return None
-                elif event.key == pygame.K_UP:
-                    selected = 0
-                elif event.key == pygame.K_DOWN:
-                    selected = 1
-                elif event.key in (K_RETURN, K_KP_ENTER):
-                    return "report" if selected == 0 else "chat"
-            
-            if event.type == MOUSEBUTTONDOWN and event.button == 1:
-                mx, my = event.pos
-                card_w = 600
-                card_h = 400
-                card_x = (WIDTH - card_w) // 2
-                card_y = (HEIGHT - card_h) // 2
-                
-                report_rect = pygame.Rect(card_x + 30, card_y + 120, card_w - 60, 80)
-                chat_rect = pygame.Rect(card_x + 30, card_y + 220, card_w - 60, 80)
-                back_rect = pygame.Rect(card_x + 30, card_y + card_h - 70, card_w - 60, 50)
-                
-                if report_rect.collidepoint(mx, my):
-                    return "report"
-                elif chat_rect.collidepoint(mx, my):
-                    return "chat"
-                elif back_rect.collidepoint(mx, my):
-                    return None
-        
-        # Render
-        screen.fill((245, 247, 250))
-        
-        card_w = 600
-        card_h = 400
-        card_x = (WIDTH - card_w) // 2
-        card_y = (HEIGHT - card_h) // 2
-        
-        pygame.draw.rect(screen, (210, 215, 220), (card_x + 4, card_y + 4, card_w, card_h), border_radius=16)
-        pygame.draw.rect(screen, WHITE, (card_x, card_y, card_w, card_h), border_radius=16)
-        pygame.draw.rect(screen, (200, 205, 210), (card_x, card_y, card_w, card_h), width=1, border_radius=16)
-        
-        # Título
-        title = font_title.render("Escolher Modo de Análise", True, (40, 45, 55))
-        screen.blit(title, (card_x + 30, card_y + 30))
-        
-        mx, my = pygame.mouse.get_pos()
-        
-        # Opção 1: Gerar Relatório
-        report_rect = pygame.Rect(card_x + 30, card_y + 120, card_w - 60, 80)
-        is_report_selected = (selected == 0)
-        is_report_hover = report_rect.collidepoint(mx, my)
-        if is_report_hover:
-            selected = 0
-        
-        report_bg = (220, 235, 250) if is_report_selected else ((235, 240, 246) if is_report_hover else WHITE)
-        pygame.draw.rect(screen, report_bg, report_rect, border_radius=12)
-        if is_report_selected:
-            pygame.draw.rect(screen, (30, 90, 160), report_rect, width=2, border_radius=12)
-        else:
-            pygame.draw.rect(screen, (200, 205, 210), report_rect, width=1, border_radius=12)
-        
-        report_title = font_item.render("📄 Gerar Relatório PDF", True, (40, 45, 55))
-        screen.blit(report_title, (report_rect.x + 15, report_rect.y + 15))
-        report_desc = font_hint.render("Análise completa com visualizações", True, (120, 125, 135))
-        screen.blit(report_desc, (report_rect.x + 15, report_rect.y + 45))
-        
-        # Opção 2: Iniciar Chat
-        chat_rect = pygame.Rect(card_x + 30, card_y + 220, card_w - 60, 80)
-        is_chat_selected = (selected == 1)
-        is_chat_hover = chat_rect.collidepoint(mx, my)
-        if is_chat_hover:
-            selected = 1
-        
-        chat_bg = (220, 235, 250) if is_chat_selected else ((235, 240, 246) if is_chat_hover else WHITE)
-        pygame.draw.rect(screen, chat_bg, chat_rect, border_radius=12)
-        if is_chat_selected:
-            pygame.draw.rect(screen, (30, 90, 160), chat_rect, width=2, border_radius=12)
-        else:
-            pygame.draw.rect(screen, (200, 205, 210), chat_rect, width=1, border_radius=12)
-        
-        chat_title = font_item.render("💬 Iniciar Chat com LLM", True, (40, 45, 55))
-        screen.blit(chat_title, (chat_rect.x + 15, chat_rect.y + 15))
-        chat_desc = font_hint.render("Diálogo interativo sobre a solução", True, (120, 125, 135))
-        screen.blit(chat_desc, (chat_rect.x + 15, chat_rect.y + 45))
-        
-        # Botão Voltar
-        back_rect = pygame.Rect(card_x + 30, card_y + card_h - 70, card_w - 60, 50)
-        back_hover = back_rect.collidepoint(mx, my)
-        back_bg = (235, 240, 246) if back_hover else (245, 247, 250)
-        pygame.draw.rect(screen, back_bg, back_rect, border_radius=12)
-        pygame.draw.rect(screen, (200, 205, 210), back_rect, width=1, border_radius=12)
-        back_txt = font_item.render("Voltar", True, (70, 75, 85))
-        screen.blit(back_txt, back_txt.get_rect(center=back_rect.center))
-        
-        # Hint
-        hint = font_hint.render("↑↓ ou mouse • Enter confirmar • Esc voltar", True, (120, 125, 135))
-        screen.blit(hint, (card_x + 30, card_y + card_h - 25))
-        
-        pygame.display.flip()
-        clock.tick(60)
-
 
 def show_chat_interface(screen: pygame.Surface, clock: pygame.time.Clock, api_key: str, json_path: str):
     """Interface de chat com LLM usando o JSON como contexto."""
@@ -519,7 +592,8 @@ def show_chat_interface(screen: pygame.Surface, clock: pygame.time.Clock, api_ke
     while True:
         for event in pygame.event.get():
             if event.type == QUIT:
-                return
+                pygame.quit()
+                raise SystemExit
             
             if event.type == KEYDOWN:
                 # Verificar modificadores primeiro
