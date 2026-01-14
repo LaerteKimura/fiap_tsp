@@ -94,8 +94,11 @@ def run_main_menu_flow(data):
 
         if initial_choice == "analyze":
             run_analyze_flow()
-        elif initial_choice == "open_report":
+            continue
+
+        if initial_choice == "open_report":
             run_open_report_flow()
+            continue
 
         run_solver_flow(data)
 
