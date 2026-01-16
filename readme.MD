@@ -1,6 +1,7 @@
 # Sistema de Otimização de Rotas com Algoritmos Genéticos
 
-Sistema completo de otimização de rotas de entrega utilizando **Algoritmos Genéticos** para resolver problemas de **TSP (Traveling Salesman Problem)** e **VRP (Vehicle Routing Problem)**, com análise avançada usando **Google Gemini AI**.
+Sistema completo de otimização de rotas de entrega utilizando **Algoritmos Genéticos** para resolver problemas de **TSP (Traveling Salesman Problem)** e **VRP (Vehicle Routing Problem)**, com análise avançada usando **Google Gemini AI** e interface de chat interativa.
+O sitema comtempla apenas o Estado de São Paulo - Como exemplo academico
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
@@ -13,6 +14,7 @@ Sistema completo de otimização de rotas de entrega utilizando **Algoritmos Gen
 - [Características](#-características)
 - [Instalação](#-instalação)
 - [Início Rápido](#-início-rápido)
+- [Menu Principal e Navegação](#-menu-principal-e-navegação)
 - [Estrutura do Projeto](#-estrutura-do-projeto)
 - [Algoritmos Genéticos](#-algoritmos-genéticos)
   - [Operadores de Mutação](#operadores-de-mutação)
@@ -21,7 +23,16 @@ Sistema completo de otimização de rotas de entrega utilizando **Algoritmos Gen
 - [Modos de Operação](#-modos-de-operação)
   - [TSP - Problema do Caixeiro Viajante](#tsp---problema-do-caixeiro-viajante)
   - [VRP - Roteamento de Veículos](#vrp---roteamento-de-veículos)
-- [Análise com IA](#-análise-com-ia)
+- [Configuração de Parâmetros](#-configuração-de-parâmetros)
+  - [Parâmetros do Algoritmo Genético](#parâmetros-do-algoritmo-genético)
+  - [Parâmetros do VRP](#parâmetros-do-vrp)
+  - [Como Alterar Parâmetros](#como-alterar-parâmetros)
+- [Análise com IA e Chat Interativo](#-análise-com-ia-e-chat-interativo)
+  - [Uso Acadêmico da LLM](#uso-acadêmico-da-llm)
+  - [Configuração da API](#configuração-da-api)
+  - [Análise de Soluções Existentes](#análise-de-soluções-existentes)
+  - [Chat Interativo com LLM](#chat-interativo-com-llm)
+  - [Geração de Relatórios PDF](#geração-de-relatórios-pdf)
 - [Controles e Interface](#-controles-e-interface)
 - [Exemplos de Uso](#-exemplos-de-uso)
 - [Arquivos de Dados](#-arquivos-de-dados)
@@ -36,8 +47,9 @@ Sistema completo de otimização de rotas de entrega utilizando **Algoritmos Gen
 - **Visualização em tempo real**: Mapa de São Paulo com rotas animadas
 - **Sistema de prioridades**: Entregas alta (P0), média (P1) e baixa (P2)
 - **Restrições realistas**: Capacidade de peso e autonomia de veículos
-- **Análise com IA**: Relatórios executivos usando Google Gemini
-- **Exportação de dados**: JSON estruturado e relatórios PDF
+- **Análise com IA**: Relatórios executivos usando Google Gemini AI
+- **Chat interativo**: Interface de conversação com LLM usando embeddings semânticos
+- **Exportação de dados**: JSON estruturado e relatórios PDF profissionais
 - **Interface interativa**: Controles em tempo real e gráficos de evolução
 
 ---
@@ -55,7 +67,7 @@ Sistema completo de otimização de rotas de entrega utilizando **Algoritmos Gen
 
 ```bash
 git clone https://github.com/LaerteKimura/fiap_tsp.git
-cd otimizacao-rotas
+cd tsp
 ```
 
 ### 3. Criar Ambiente Virtual (Recomendado)
@@ -89,6 +101,7 @@ pip install -r requirements-dev.txt
 - `pandas` - Processamento de dados
 - `reportlab` - Geração de PDFs
 - `google-generativeai` - Análise com IA (opcional)
+- `pyperclip` - Suporte a clipboard (opcional)
 
 ### 5. Verificar Instalação
 
@@ -104,14 +117,15 @@ pip list          # Verifica pacotes instalados
 ### Execução Básica
 
 ```bash
-python tsp.py
+python main.py
 ```
 
 ### Fluxo Rápido (3 passos)
 
-1. **Escolha o modo**
-   - Pressione `A` para **analisar** solução existente
-   - Pressione `N` para **criar nova** solução
+1. **Escolha a opção no menu inicial**
+   - `Analisar solução existente` - Para analisar JSONs exportados
+   - `Abrir relatório existente` - Para visualizar PDFs gerados
+   - `Criar nova solução` - Para otimizar novas rotas
 
 2. **Configure o algoritmo** (se criando nova solução)
    - Escolha tipo de **Mutação** (Swap, Inversion, Scramble)
@@ -128,7 +142,7 @@ python tsp.py
 # 1. Iniciar o sistema
 python main.py
 
-# 2. Escolher "N" (Nova solução)
+# 2. Escolher "Criar nova solução"
 
 # 3. Configurar algoritmo (exemplo):
 #    - Mutação: Swap
@@ -143,15 +157,53 @@ python main.py
 
 # 7. Exportar solução: pressionar tecla "E"
 
-# 8. Analisar: executar novamente e escolher "A"
+# 8. Analisar: executar novamente e escolher "Analisar solução existente"
 ```
+
+---
+
+## Menu Principal e Navegação
+
+### Menu Inicial
+
+Ao executar `python main.py`, você verá o menu principal com 4 opções:
+
+1. **Analisar solução existente**
+   - Permite analisar soluções JSON exportadas anteriormente
+   - Oferece duas opções:
+     - **Gerar relatório PDF**: Cria relatório executivo com análise da LLM
+     - **Chat com LLM**: Interface interativa para fazer perguntas sobre a solução
+   - Requer API Key do Google Gemini (solicitada na primeira execução)
+
+2. **Abrir relatório existente**
+   - Lista todos os relatórios PDF gerados anteriormente
+   - Permite abrir e visualizar relatórios diretamente no visualizador padrão
+   - Não requer API Key
+
+3. **Criar nova solução**
+   - Inicia o fluxo de otimização de rotas
+   - Passa por:
+     - Seleção de modo (TSP ou VRP)
+     - Configuração do Algoritmo Genético
+     - Seleção de depósito (apenas VRP)
+     - Execução da otimização
+
+4. **Sair**
+   - Encerra a aplicação
+
+### Navegação entre Menus
+
+- **Setas do teclado** (↑↓): Navegar entre opções
+- **Enter**: Confirmar seleção
+- **Esc**: Voltar ao menu anterior
+- **Mouse**: Clicar para selecionar opções
 
 ---
 
 ## Estrutura do Projeto
 
 ```
-fiap_tsp/
+tsp/
 │
 ├── main.py                          # Script principal
 ├── genetic_algorithm.py             # Core do Algoritmo Genético
@@ -171,6 +223,7 @@ fiap_tsp/
 │   ├── ga_menu.py                  # Menu AG
 │   ├── tsp_view.py                 # Execução TSP
 │   ├── vrp_view.py                 # Execução VRP
+│   ├── vrp_depot_selection.py      # Seleção de depósito
 │   ├── analyze_view.py             # Análise e chat
 │   └── open_report_view.py         # Abrir relatórios
 │
@@ -191,33 +244,15 @@ fiap_tsp/
 ├── data_files/                      # Dados do problema
 │   ├── deliveries.csv              # Entregas
 │   ├── veiculos.csv                # Veículos
-│   ├── cidades_sp.tsv              # Distâncias
+│   ├── cidades_sp.tsv               # Distâncias
 │   ├── worldcities.csv             # Coordenadas
 │   └── geojs-35-mun.json           # GeoJSON SP
 │
-├── tests/                           # Testes automatizados
-│   ├── conftest.py                 # Fixtures
-│   ├── test_loaders.py             # Testes loaders
-│   ├── test_genetic_algorithm.py   # Testes AG
-│   ├── test_constraints.py         # Testes restrições
-│   ├── test_export.py              # Testes export
-│   ├── test_vrp_solver.py          # Testes VRP
-│   └── README.md                   # Doc testes
-│
-├── docs/                            # Documentação
-│   ├── README.md                   # Índice documentação
-│   ├── ARQUITETURA.md              # Arquitetura detalhada
-│   ├── DIAGRAMAS.md                # Diagramas Mermaid
-│   ├── COMPONENTES.md              # Doc componentes
-│   └── TESTING.md                  # Doc testes
-│
-├── solutions/                       # Soluções exportadas
-├── reports/                         # Relatórios PDF
+├── solutions/                       # Soluções exportadas (JSON)
+├── reports/                         # Relatórios PDF gerados
 │
 ├── requirements.txt                 # Dependências produção
-├── requirements-dev.txt             # Dependências dev
-├── pytest.ini                       # Config pytest
-├── run_tests.py                     # Script auxiliar testes
+├── requirements-dev.txt            # Dependências dev
 └── README.md                        # Este arquivo
 ```
 
@@ -602,6 +637,7 @@ Prioridades: 3x P0, 5x P1, 4x P2
 - Cada rota: distância ≤ autonomia do veículo
 - Cada veículo usado no máximo uma vez
 - Se há depósito: todas rotas partem/retornam dele
+- Se não há depósito: rotas são fechadas (retornam à primeira cidade)
 
 **Função Fitness VRP:**
 ```
@@ -609,6 +645,7 @@ fitness = Σ(custo_rota_i)
         + penalidade_veículos_extras
         + penalidade_violações_capacidade
         + penalidade_prioridades_mal_sequenciadas
+        + penalidade_subutilização (peso e distância)
         + PENALIDADE_MASSIVA (se inviável)
 ```
 
@@ -644,11 +681,331 @@ Todas rotas viáveis: Sim
 
 ---
 
-## Análise com IA
+## Configuração de Parâmetros
 
-O sistema inclui análise avançada usando **Google Gemini AI** com embeddings.
+### Parâmetros do Algoritmo Genético
 
-### Configuração
+Arquivo: `config/ga_config.py`
+
+```python
+# Tamanho da população
+POPULATION_SIZE = 100  # Aumentar para melhor qualidade (50-200)
+
+# Taxa de mutação
+MUTATION_RATE = 0.4    # 0.2-0.5 recomendado
+
+# Peso de prioridade
+PRIORITY_WEIGHT = 20   # Aumentar para forçar prioridades
+
+# Elitismo: porcentagem da população mantida como elite
+ELITE_PERCENTAGE = 0.1  # 10% da população mantida como elite
+
+# Interface
+DEFAULT_SHOW_PLOT = True
+DEFAULT_SHOW_LIST = True
+DEFAULT_SHOW_ATTEMPTS = True
+DEFAULT_SHOW_COORDINATES = False
+```
+
+**Descrição dos Parâmetros:**
+
+- **`POPULATION_SIZE`**: Número de indivíduos na população
+  - Valores menores (50-80): Convergência rápida, menor qualidade
+  - Valores médios (100-150): Balanceado (recomendado)
+  - Valores maiores (200+): Melhor qualidade, mais lento
+
+- **`MUTATION_RATE`**: Probabilidade de mutação por gene
+  - Valores baixos (0.2-0.3): Menos diversidade, convergência rápida
+  - Valores médios (0.4): Balanceado (recomendado)
+  - Valores altos (0.5+): Alta diversidade, pode não convergir
+
+- **`PRIORITY_WEIGHT`**: Peso da penalidade de prioridades
+  - Valores baixos (10-15): Prioridades menos importantes
+  - Valores médios (20-30): Balanceado (recomendado)
+  - Valores altos (50+): Prioridades muito importantes
+
+- **`ELITE_PERCENTAGE`**: Porcentagem de melhores indivíduos mantidos
+  - 0.05 (5%): Menos elitismo, mais exploração
+  - 0.1 (10%): Balanceado (recomendado)
+  - 0.2 (20%): Mais elitismo, menos exploração
+
+---
+
+### Parâmetros do VRP
+
+Arquivo: `config/ga_config.py` (parâmetros gerais) e `vrp_solver.py` (parâmetros específicos)
+
+#### Parâmetros em `config/ga_config.py`:
+
+```python
+# Gerações por rota no VRP
+VRP_GENERATIONS_PER_ROUTE = 200  # Aumentar para VRP complexo (100-500)
+
+# Custo fixo por rota (independente do veículo)
+VRP_FIXED_COST_PER_ROUTE = 1500  # Custo fixo em R$ adicionado ao custo de cada rota
+
+# Critérios de parada VRP
+VRP_MAX_GENERATIONS = 2000  # Máximo de gerações para VRP (evita execução infinita)
+VRP_CONVERGENCE_GENERATIONS = 100  # Gerações sem melhoria para considerar convergência
+VRP_CONVERGENCE_THRESHOLD = 0.002  # Melhoria mínima para resetar contador de convergência
+```
+
+**Descrição dos Parâmetros:**
+
+- **`VRP_GENERATIONS_PER_ROUTE`**: Número de gerações para otimizar cada rota
+  - Valores menores (100-150): Rápido, menor qualidade
+  - Valores médios (200-300): Balanceado (recomendado)
+  - Valores maiores (400-500): Melhor qualidade, muito lento
+
+- **`VRP_FIXED_COST_PER_ROUTE`**: Custo fixo adicionado a cada rota
+  - Incentiva usar menos veículos
+  - Ajuste conforme seu modelo de negócio
+
+- **`VRP_MAX_GENERATIONS`**: Limite máximo de gerações
+  - Evita execução infinita
+  - Aumentar apenas se necessário
+
+- **`VRP_CONVERGENCE_GENERATIONS`**: Gerações sem melhoria para parar
+  - Valores menores (50-80): Para mais rápido
+  - Valores maiores (100-150): Mais tempo para convergir
+
+- **`VRP_CONVERGENCE_THRESHOLD`**: Melhoria mínima para resetar contador
+  - Valores menores (0.001): Mais sensível
+  - Valores maiores (0.005): Menos sensível
+
+#### Parâmetros em `vrp_solver.py` (classe `VRPOptions`):
+
+```python
+class VRPOptions:
+    def __init__(self):
+        # PENALIDADES para violações
+        self.WEIGHTS = {
+            'distance': 0.1,                    # Peso da distância
+            'priority': 50.0,                   # Peso das prioridades
+            'vehicle_count': 800,                # Penalidade por número de veículos
+            'vehicle_use': 300,                  # Penalidade por usar veículos extras
+            'uncovered_city': 50000,            # Penalidade por cidade não coberta
+            'capacity_violation': 100000,        # Penalidade base por violação de capacidade
+            'duplicate_vehicle': 1000000,        # Penalidade por usar mesmo veículo duas vezes
+            'weight_violation': 200000,         # Penalidade por violação de peso
+            'distance_violation': 200000,        # Penalidade por violação de distância
+            'underutilization': 500.0,          # Penalidade por subutilização de capacidade (peso)
+            'distance_underutilization': 100.0, # Penalidade por subutilização de distância
+        }
+        
+        # Threshold de utilização mínima
+        self.MIN_UTILIZATION_THRESHOLD = 0.6  # 60% de utilização mínima de peso
+        self.MIN_DISTANCE_UTILIZATION_THRESHOLD = 0.5  # 50% de utilização mínima de distância
+        
+        # Taxas de mutação específicas do VRP
+        self.MUTATION_RATES = {
+            'swap_between_routes': 0.4,  # Trocar cidade entre rotas
+            'move_city': 0.4,             # Mover cidade para outra rota
+            'swap_within_route': 0.5,     # Trocar cidades dentro da mesma rota
+            'reverse_segment': 0.3,        # Inverter segmento de rota
+            'split_route': 0.2,            # Dividir rota em duas
+        }
+```
+
+**Descrição dos Pesos (WEIGHTS):**
+
+- **`distance`**: Peso da distância total no fitness
+  - Valores menores (0.05-0.1): Distância menos importante
+  - Valores maiores (0.2-0.5): Distância mais importante
+
+- **`priority`**: Peso das prioridades
+  - Valores menores (30-40): Prioridades menos importantes
+  - Valores maiores (50-100): Prioridades muito importantes
+
+- **`vehicle_count`**: Penalidade por cada veículo usado
+  - Incentiva usar menos veículos
+  - Aumentar para forçar menos veículos
+
+- **`underutilization`**: Penalidade por subutilização de peso
+  - Aplicada quando veículo usa menos de 60% da capacidade
+  - Incentiva melhor utilização dos veículos
+
+- **`distance_underutilization`**: Penalidade por subutilização de distância
+  - Aplicada quando veículo percorre menos de 50% da autonomia
+  - Incentiva usar veículos com alcance adequado
+
+**Descrição dos Thresholds:**
+
+- **`MIN_UTILIZATION_THRESHOLD`**: Utilização mínima de peso (0.0-1.0)
+  - 0.5 (50%): Mais tolerante
+  - 0.6 (60%): Balanceado (recomendado)
+  - 0.7 (70%): Mais rigoroso
+
+- **`MIN_DISTANCE_UTILIZATION_THRESHOLD`**: Utilização mínima de distância (0.0-1.0)
+  - 0.4 (40%): Mais tolerante
+  - 0.5 (50%): Balanceado (recomendado)
+  - 0.6 (60%): Mais rigoroso
+
+---
+
+### Como Alterar Parâmetros
+
+#### 1. Parâmetros do Algoritmo Genético
+
+Edite o arquivo `config/ga_config.py`:
+
+```python
+# Exemplo: Aumentar população para melhor qualidade
+POPULATION_SIZE = 200
+
+# Exemplo: Reduzir taxa de mutação para convergência mais rápida
+MUTATION_RATE = 0.3
+
+# Exemplo: Aumentar peso de prioridades
+PRIORITY_WEIGHT = 50
+```
+
+#### 2. Parâmetros do VRP
+
+**Parâmetros gerais** - Edite `config/ga_config.py`:
+
+```python
+# Exemplo: Aumentar gerações por rota
+VRP_GENERATIONS_PER_ROUTE = 300
+
+# Exemplo: Aumentar custo fixo para incentivar menos veículos
+VRP_FIXED_COST_PER_ROUTE = 2000
+```
+
+**Parâmetros específicos** - Edite `vrp_solver.py` (classe `VRPOptions`):
+
+```python
+class VRPOptions:
+    def __init__(self):
+        self.WEIGHTS = {
+            # Exemplo: Aumentar penalidade por subutilização
+            'underutilization': 1000.0,
+            
+            # Exemplo: Aumentar threshold de utilização
+            # (edite também MIN_UTILIZATION_THRESHOLD)
+        }
+        
+        # Exemplo: Aumentar threshold de utilização mínima
+        self.MIN_UTILIZATION_THRESHOLD = 0.7  # 70%
+```
+
+#### 3. Ajuste Fino
+
+**Para convergência rápida:**
+```python
+POPULATION_SIZE = 50
+MUTATION_RATE = 0.3
+VRP_GENERATIONS_PER_ROUTE = 100
+```
+
+**Para qualidade máxima:**
+```python
+POPULATION_SIZE = 200
+MUTATION_RATE = 0.4
+VRP_GENERATIONS_PER_ROUTE = 300
+```
+
+**Para problemas grandes:**
+```python
+POPULATION_SIZE = 150
+MUTATION_RATE = 0.5
+VRP_GENERATIONS_PER_ROUTE = 200
+```
+
+---
+
+## Análise com IA e Chat Interativo
+
+O sistema inclui análise avançada usando **Google Gemini AI** com embeddings semânticos e interface de chat interativa.
+
+### Uso Acadêmico da LLM
+
+A integração da LLM (Large Language Model) no sistema foi implementada seguindo princípios acadêmicos de **Recuperação de Informação (Information Retrieval)** e **RAG (Retrieval-Augmented Generation)**:
+
+#### 1. **Embeddings Semânticos**
+
+**Conceito Acadêmico:** Utilização de modelos de embeddings para representação vetorial de texto, permitindo busca semântica ao invés de busca exata por palavras-chave.
+
+**Implementação:**
+- **Modelo utilizado**: `models/embedding-001` (Google Gemini)
+- **Processo**: 
+  1. O JSON da solução é dividido em **chunks de texto** estruturados
+  2. Cada chunk recebe um **embedding vetorial** (representação numérica)
+  3. Os embeddings são armazenados para busca rápida
+
+**Chunks criados:**
+- Resumo Geral (metadados)
+- Estatísticas Agregadas (métricas principais)
+- Detalhes de cada rota (cidades, entregas, métricas)
+- Informações de veículos utilizados
+
+**Benefício Acadêmico:** Demonstra aplicação prática de **NLP (Natural Language Processing)** e **Representação Distribuída de Texto**.
+
+#### 2. **Busca por Similaridade Semântica**
+
+**Conceito Acadêmico:** Utilização de **similaridade de cosseno** para encontrar contexto relevante baseado no significado, não apenas em palavras-chave.
+
+**Implementação:**
+- Quando o usuário faz uma pergunta, ela é convertida em embedding
+- O sistema calcula a **similaridade de cosseno** entre o embedding da pergunta e todos os chunks
+- Os **top-K chunks mais similares** (K=7) são selecionados como contexto
+
+**Benefício Acadêmico:** Demonstra aplicação de **Métricas de Similaridade** e **Information Retrieval**.
+
+#### 3. **RAG (Retrieval-Augmented Generation)**
+
+**Conceito Acadêmico:** Técnica que combina recuperação de informações com geração de texto, garantindo que a LLM tenha acesso a contexto relevante e específico.
+
+**Implementação:**
+- **Retrieval**: Busca semântica nos chunks da solução
+- **Augmentation**: Contexto relevante é incluído no prompt
+- **Generation**: LLM gera resposta baseada no contexto recuperado
+
+**Estrutura do Prompt:**
+```
+1. Instruções para a LLM (papel, formato de resposta)
+2. Contexto recuperado (chunks relevantes)
+3. Dados completos do JSON (limitado para evitar overflow)
+4. Pergunta do usuário
+```
+
+**Benefício Acadêmico:** Demonstra aplicação prática de **RAG**, técnica state-of-the-art em sistemas de Q&A.
+
+#### 4. **Análise Estruturada para Relatórios**
+
+**Conceito Acadêmico:** Geração de análises estruturadas usando **prompt engineering** para extrair insights específicos.
+
+**Implementação:**
+- A LLM é solicitada a gerar **6 análises especializadas**:
+  1. Resumo Executivo
+  2. Análise de Viabilidade
+  3. Distribuição de Prioridades
+  4. Eficiência de Custos
+  5. Pontos Críticos
+  6. Recomendações
+
+- Cada análise usa **prompts específicos** com instruções claras
+- O contexto relevante é recuperado para cada tipo de análise
+
+**Benefício Acadêmico:** Demonstra **Prompt Engineering** e **Análise de Dados com IA**.
+
+#### 5. **Interface de Chat Interativa**
+
+**Conceito Acadêmico:** Sistema de conversação onde a LLM mantém contexto da solução através de embeddings.
+
+**Implementação:**
+- Interface gráfica de chat (estilo chat moderno)
+- Cada pergunta do usuário:
+  1. É convertida em embedding
+  2. Busca chunks relevantes na solução
+  3. Gera resposta contextualizada
+  4. Mantém histórico da conversa
+
+**Benefício Acadêmico:** Demonstra aplicação de **Sistemas de Conversação** e **Context Management**.
+
+---
+
+### Configuração da API
 
 1. **Obter API Key:**
    - Acesse: https://makersuite.google.com/app/apikey
@@ -672,38 +1029,145 @@ set GEMINI_API_KEY=sua_chave_aqui
 $env:GEMINI_API_KEY="sua_chave_aqui"
 ```
 
-### Como Usar
+**Alternativa:** A API Key pode ser inserida diretamente na interface quando solicitada.
 
-**Opção 1: Menu Inicial**
-```bash
-python tsp.py
-# Pressione "A" para análise
-```
+---
 
-**Opção 2: Análise Direta**
-```bash
-python route_analyzer.py
-```
+### Análise de Soluções Existentes
 
-### O que a Análise Gera
+#### Acessando a Análise
 
-1. **Embeddings inteligentes** - Busca semântica no contexto
-2. **6 Análises especializadas:**
-   - Resumo Executivo
-   - Análise de Viabilidade
-   - Distribuição de Prioridades
-   - Eficiência de Custos
-   - Pontos Críticos
-   - Recomendações
+1. Execute `python main.py`
+2. Selecione **"Analisar solução existente"**
+3. Se necessário, insira a API Key do Google Gemini
+4. Selecione o arquivo JSON da solução desejada
 
-3. **Visualizações automáticas:**
-   - TSP: 4 gráficos
-   - VRP: 6 gráficos
+#### Opções Disponíveis
 
-4. **Relatório PDF profissional**
-   - Formatação executiva
-   - Tabelas e gráficos integrados
-   - Análises detalhadas
+Após selecionar o arquivo JSON, você terá duas opções:
+
+##### 1. **Gerar Relatório PDF**
+
+**O que faz:**
+- Cria embeddings semânticos do JSON
+- Gera 6 análises especializadas usando a LLM
+- Cria visualizações (gráficos) automáticas
+- Gera relatório PDF profissional
+
+**Análises geradas:**
+1. **Resumo Executivo**: Visão geral da solução
+2. **Análise de Viabilidade**: Verificação de restrições e violações
+3. **Distribuição de Prioridades**: Análise de entregas por prioridade
+4. **Eficiência de Custos**: Análise de custos e otimizações
+5. **Pontos Críticos**: Identificação de problemas e gargalos
+6. **Recomendações**: Sugestões de melhorias
+
+**Visualizações geradas:**
+- **TSP**: 4 gráficos (distribuição de prioridades, custos, etc.)
+- **VRP**: 6 gráficos (distribuição de rotas, utilização de veículos, etc.)
+
+**Arquivo gerado:**
+- Localização: `reports/`
+- Nome: `report_YYYYMMDD_HHMMSS.pdf`
+
+##### 2. **Chat com LLM**
+
+**O que faz:**
+- Cria embeddings semânticos do JSON
+- Abre interface de chat interativa
+- Permite fazer perguntas sobre a solução
+- LLM responde usando o JSON como base de conhecimento
+
+**Funcionalidades do Chat:**
+- Interface moderna estilo chat
+- Histórico de conversa
+- Scrollbar visível
+- Suporte a Ctrl+V para colar texto
+- Respostas contextualizadas baseadas no JSON
+
+---
+
+### Chat Interativo com LLM
+
+#### Como Usar o Chat
+
+1. Selecione **"Analisar solução existente"** no menu principal
+2. Escolha o arquivo JSON
+3. Selecione **"Chat com LLM"**
+4. Aguarde o processamento dos embeddings (pode levar alguns segundos)
+5. Digite sua pergunta e pressione **Enter**
+
+#### Controles do Chat
+
+- **Enter**: Enviar mensagem
+- **Esc**: Voltar ao menu anterior
+- **Ctrl+V**: Colar texto da área de transferência
+- **Mouse Wheel**: Rolar mensagens
+- **Scrollbar**: Arrastar para navegar
+
+#### Exemplos de Perguntas
+
+**Sobre métricas gerais:**
+- "Quantas rotas existem nesta solução?"
+- "Qual é o custo total?"
+- "Quantas cidades foram visitadas?"
+
+**Sobre rotas específicas:**
+- "Qual rota tem maior distância?"
+- "Quais veículos foram utilizados?"
+- "Há alguma violação de capacidade?"
+
+**Sobre prioridades:**
+- "Quantas entregas de prioridade alta existem?"
+- "Como estão distribuídas as prioridades?"
+
+**Análises mais complexas:**
+- "Analise a eficiência desta solução"
+- "Quais são os pontos críticos?"
+- "Faça recomendações de melhoria"
+
+#### Como Funciona (Tecnicamente)
+
+1. **Embedding da Pergunta**: A pergunta do usuário é convertida em embedding vetorial
+2. **Busca Semântica**: O sistema busca os 7 chunks mais similares no JSON
+3. **Construção do Prompt**: 
+   - Instruções para a LLM
+   - Chunks relevantes recuperados
+   - Dados essenciais do JSON (Resumo Geral, Estatísticas Agregadas, Métricas Principais)
+   - Pergunta do usuário
+4. **Geração da Resposta**: A LLM gera resposta baseada no contexto
+5. **Renderização**: A resposta é renderizada na interface
+
+**Modelo utilizado:**
+- **Embeddings**: `models/embedding-001`
+- **Geração**: `gemini-3-flash-preview`
+
+---
+
+### Geração de Relatórios PDF
+
+#### Processo de Geração
+
+1. **Criação de Embeddings**: JSON é dividido em chunks e convertido em embeddings
+2. **Análises Especializadas**: Para cada tipo de análise:
+   - Busca chunks relevantes
+   - Gera prompt específico
+   - LLM gera análise contextualizada
+3. **Geração de Visualizações**: 
+   - Gráficos são criados usando matplotlib
+   - Salvos como imagens em `reports/`
+4. **Montagem do PDF**: 
+   - Usa ReportLab para criar PDF
+   - Inclui metadados, análises, gráficos
+   - Formatação profissional
+
+#### Estrutura do Relatório PDF
+
+1. **Capa**: Título e metadados
+2. **Tabela de Metadados**: Modo, data, algoritmo, etc.
+3. **Visualizações**: Gráficos gerados automaticamente
+4. **Análises**: 6 seções com análises da LLM
+5. **Formatação**: Estilo executivo profissional
 
 ---
 
@@ -712,6 +1176,7 @@ python route_analyzer.py
 ### Controles Durante Execução
 
 #### Modo TSP
+
 | Tecla | Função |
 |-------|--------|
 | `G` | Toggle gráficos de evolução |
@@ -724,6 +1189,7 @@ python route_analyzer.py
 | `Q` | Sair |
 
 #### Modo VRP
+
 | Tecla | Função |
 |-------|--------|
 | `G` | Toggle gráficos de evolução |
@@ -754,7 +1220,7 @@ python route_analyzer.py
 
 **Painel Direito (800px - VRP com D):**
 - Detalhes completos de cada rota
-- Sequência de cidades
+- Sequência de cidades com distâncias
 - Estatísticas por rota
 - Alertas de violações
 - Prioridades por entrega
@@ -767,9 +1233,9 @@ python route_analyzer.py
 
 ```bash
 # 1. Iniciar
-python tsp.py
+python main.py
 
-# 2. Menu inicial: pressionar "N"
+# 2. Menu inicial: pressionar "Criar nova solução"
 
 # 3. Configuração GA:
 #    Mutação: Swap
@@ -786,17 +1252,17 @@ python tsp.py
 #    - Lista de cidades ordenadas
 
 # 7. Exportar: pressionar "E"
-#    Arquivo gerado: tsp_solution_YYYYMMDD_HHMMSS.json
+#    Arquivo gerado: solutions/tsp_solution_YYYYMMDD_HHMMSS.json
 
 # 8. Analisar (opcional):
-#    python tsp.py → "A" → escolher arquivo
+#    python main.py → "Analisar solução existente" → escolher arquivo
 ```
 
 ### Exemplo 2: VRP com Depósito
 
 ```bash
 # 1. Iniciar
-python tsp.py → "N"
+python main.py → "Criar nova solução"
 
 # 2. Configurar GA:
 #    Mutação: Inversion
@@ -815,33 +1281,58 @@ python tsp.py → "N"
 #    - Depósito marcado com "D"
 
 # 7. Detalhes: pressionar "D"
-#    Ver todas rotas, cidades, pesos
+#    Ver todas rotas, cidades, pesos, distâncias
 
 # 8. Exportar: "E"
-#    Arquivo: vrp_solution_YYYYMMDD_HHMMSS.json
+#    Arquivo: solutions/vrp_solution_YYYYMMDD_HHMMSS.json
 
 # 9. Analisar:
-#    python route_analyzer.py → escolher arquivo
-#    Relatório PDF gerado automaticamente
+#    python main.py → "Analisar solução existente" → escolher arquivo
+#    Escolher "Gerar relatório PDF" ou "Chat com LLM"
 ```
 
-### Exemplo 3: Comparação de Algoritmos
+### Exemplo 3: Análise com Chat
+
+```bash
+# 1. Iniciar
+python main.py
+
+# 2. Selecionar "Analisar solução existente"
+
+# 3. Inserir API Key (se necessário)
+
+# 4. Selecionar arquivo JSON
+
+# 5. Escolher "Chat com LLM"
+
+# 6. Aguardar processamento dos embeddings
+
+# 7. Fazer perguntas:
+#    - "Quantas rotas existem?"
+#    - "Qual é o custo total?"
+#    - "Há violações de capacidade?"
+#    - "Analise a eficiência desta solução"
+
+# 8. Ver respostas contextualizadas baseadas no JSON
+```
+
+### Exemplo 4: Comparação de Algoritmos
 
 **Teste 1: Swap + Tournament**
 ```bash
-python tsp.py → N → Swap, Tournament, OX → TSP
+python main.py → Criar nova solução → Swap, Tournament, OX → TSP
 # Anotar: Fitness final, tempo
 ```
 
 **Teste 2: Inversion + Tournament**
 ```bash
-python tsp.py → N → Inversion, Tournament, OX → TSP
+python main.py → Criar nova solução → Inversion, Tournament, OX → TSP
 # Comparar resultados
 ```
 
 **Teste 3: Scramble + Roulette**
 ```bash
-python tsp.py → N → Scramble, Roulette, OX → TSP
+python main.py → Criar nova solução → Scramble, Roulette, OX → TSP
 # Ver diferença na exploração
 ```
 
@@ -852,6 +1343,7 @@ python tsp.py → N → Scramble, Roulette, OX → TSP
 ### Estrutura dos CSVs
 
 #### `deliveries.csv`
+
 ```csv
 id,medicine_name,quantity,total_weight,city,location_name,priority
 1,Paracetamol,100,15.5,São Paulo,Hospital Central,0
@@ -869,6 +1361,7 @@ id,medicine_name,quantity,total_weight,city,location_name,priority
 - `priority`: 0 (alta), 1 (média), 2 (baixa)
 
 #### `veiculos.csv`
+
 ```csv
 id,name,max_capacity,max_distance,max_weight,cost_per_km
 V1,Van Pequena,1500,300,1500,2.5
@@ -885,6 +1378,7 @@ V2,Caminhão Médio,3000,600,3000,3.0
 - `cost_per_km`: Custo por quilômetro em R$
 
 #### `cidades_sp.tsv`
+
 ```tsv
 origem	destino	distancia
 São Paulo	Campinas	92.5
@@ -905,75 +1399,6 @@ Para usar seus próprios dados:
 2. **Adicione cidades em `cidades_sp.tsv`**
 3. **Configure coordenadas em `worldcities.csv`**
 4. **Ajuste veículos conforme sua frota**
-
----
-
-## Testes Automatizados
-
-O projeto inclui uma suíte completa de testes automatizados para garantir a qualidade do código.
-
-### Executar Testes
-
-```bash
-# Executar todos os testes
-pytest
-
-# Executar com relatório de cobertura
-pytest --cov=. --cov-report=html
-
-# Script auxiliar interativo
-python run_tests.py
-```
-
-### Cobertura de Testes
-
-**42 testes** cobrindo:
-- Carregamento e validação de dados (9 testes)
-- Operadores do algoritmo genético (10 testes)
-- Validação de restrições (9 testes)
-- Função fitness TSP e VRP (incluído)
-- Exportação de soluções para JSON (6 testes)
-- Solver VRP e suas restrições (8 testes)
-
-**Status**: 100% dos testes passando | Tempo: ~0.33s
-
-Documentação completa: [docs/TESTING.md](docs/TESTING.md)
-
----
-
-## Documentação
-
-O projeto possui documentação completa e detalhada:
-
-### Documentos Principais
-
-1. **[docs/ARQUITETURA.md](docs/ARQUITETURA.md)**
-   - Arquitetura do sistema (4 camadas)
-   - Componentes e responsabilidades
-   - Fluxos de dados (TSP, VRP, IA)
-   - Padrões de projeto
-   - Decisões arquiteturais
-
-2. **[docs/DIAGRAMAS.md](docs/DIAGRAMAS.md)**
-   - 10 diagramas Mermaid
-   - Fluxogramas completos
-   - Diagramas de sequência
-   - Estruturas de dados
-   - Pipelines de otimização
-
-3. **[docs/COMPONENTES.md](docs/COMPONENTES.md)**
-   - Documentação detalhada de cada módulo
-   - Assinaturas de funções
-   - Estruturas de dados
-   - Dependências entre componentes
-
-4. **[docs/TESTING.md](docs/TESTING.md)**
-   - Guia completo de testes
-   - Fixtures e exemplos
-   - Boas práticas
-   - Troubleshooting
-
-**Ver índice completo**: [docs/README.md](docs/README.md)
 
 ---
 
@@ -1015,13 +1440,13 @@ ls data_files/
 ### Problema: Fitness não melhora
 
 **Causas comuns:**
-- População muito pequena (aumentar em `config.py`)
+- População muito pequena (aumentar em `config/ga_config.py`)
 - Taxa de mutação muito alta (diminuir)
 - Problema sem solução viável
 
 **Solução:**
 ```python
-# config.py
+# config/ga_config.py
 POPULATION_SIZE = 200  # Aumentar
 MUTATION_RATE = 0.3    # Ajustar
 ```
@@ -1031,7 +1456,7 @@ MUTATION_RATE = 0.3    # Ajustar
 **Soluções:**
 1. Adicionar mais veículos em `veiculos.csv`
 2. Aumentar capacidade dos veículos
-3. Aumentar `VRP_GENERATIONS_PER_ROUTE` em `config.py`
+3. Aumentar `VRP_GENERATIONS_PER_ROUTE` em `config/ga_config.py`
 4. Usar modo "Sem depósito"
 
 ### Problema: Análise com IA falha
@@ -1052,50 +1477,21 @@ MUTATION_RATE = 0.3    # Ajustar
 
 4. API Key válida? (teste em https://makersuite.google.com)
 
----
+### Problema: Chat não responde
 
-## Parâmetros de Configuração
+**Soluções:**
+1. Verificar se embeddings foram criados (mensagem de progresso)
+2. Verificar conexão com internet
+3. Verificar API Key válida
+4. Tentar perguntas mais simples primeiro
 
-### `config.py`
+### Problema: Relatório PDF vazio
 
-```python
-# Tamanho da população
-POPULATION_SIZE = 100  # Aumentar para melhor qualidade
-
-# Taxa de mutação
-MUTATION_RATE = 0.4    # 0.2-0.5 recomendado
-
-# Peso de prioridade
-PRIORITY_WEIGHT = 20   # Aumentar para forçar prioridades
-
-# Gerações VRP
-VRP_GENERATIONS_PER_ROUTE = 100  # Aumentar para VRP complexo
-
-# Interface
-DEFAULT_SHOW_PLOT = True
-DEFAULT_SHOW_LIST = True
-```
-
-### Ajuste Fino
-
-**Para convergência rápida:**
-```python
-POPULATION_SIZE = 50
-MUTATION_RATE = 0.3
-```
-
-**Para qualidade máxima:**
-```python
-POPULATION_SIZE = 200
-MUTATION_RATE = 0.4
-VRP_GENERATIONS_PER_ROUTE = 200
-```
-
-**Para problemas grandes:**
-```python
-POPULATION_SIZE = 150
-MUTATION_RATE = 0.5
-```
+**Soluções:**
+1. Verificar se JSON tem dados válidos
+2. Verificar se API Key está configurada
+3. Verificar permissões de escrita em `reports/`
+4. Verificar logs de erro no console
 
 ---
 
